@@ -147,6 +147,22 @@ static int cs_set_frame(AXUIElementRef win, double x, double y, double w, double
 	return e == kAXErrorSuccess ? 1 : 0;
 }
 
+static int cs_get_frame(AXUIElementRef win, double *x, double *y, double *w, double *h) {
+	CFTypeRef pv = NULL, sv = NULL;
+	CGPoint p;
+	CGSize s;
+	int ok = 0;
+	if (AXUIElementCopyAttributeValue(win, kAXPositionAttribute, &pv) == kAXErrorSuccess && pv &&
+	    AXUIElementCopyAttributeValue(win, kAXSizeAttribute, &sv) == kAXErrorSuccess && sv &&
+	    AXValueGetValue((AXValueRef)pv, kAXValueCGPointType, &p) && AXValueGetValue((AXValueRef)sv, kAXValueCGSizeType, &s)) {
+		*x = p.x; *y = p.y; *w = s.width; *h = s.height;
+		ok = 1;
+	}
+	if (pv) CFRelease(pv);
+	if (sv) CFRelease(sv);
+	return ok;
+}
+
 static int cs_set_fullscreen(AXUIElementRef win) {
 	AXUIElementPerformAction(win, kAXRaiseAction);
 	return AXUIElementSetAttributeValue(win, CFSTR("AXFullScreen"), kCFBooleanTrue) == kAXErrorSuccess ? 1 : 0;
@@ -366,6 +382,7 @@ func (a *Arranger) Place(ctx context.Context, rsc cue.Resource, path string, slo
 	} else if name != "" {
 		pid = pidForName(name)
 	}
+	wasRunning := pid > 0
 	var before C.CFArrayRef
 	if pid > 0 {
 		before = C.cs_windows(C.int(pid))
@@ -403,9 +420,13 @@ func (a *Arranger) Place(ctx context.Context, rsc cue.Resource, path string, slo
 	defer C.cs_release(C.CFTypeRef(win))
 
 	note := ""
-	if C.cs_active_space() != space {
+	// Only an app that was already running can have pulled us to another
+	// desktop; a fresh launch can switch away from a full-screen space too.
+	if wasRunning && C.cs_active_space() != space {
 		note = "was already open on another desktop, so it was arranged there"
 	}
+	// Let the window finish its opening animation before moving it.
+	sleep(ctx, 250*time.Millisecond)
 
 	if fullScreen {
 		if C.cs_set_fullscreen(win) != 1 {
@@ -422,10 +443,32 @@ func (a *Arranger) Place(ctx context.Context, rsc cue.Resource, path string, slo
 	fy := float64(y) + slot.Y*float64(h) + gap
 	fw := slot.W*float64(w) - 2*gap
 	fh := slot.H*float64(h) - 2*gap
-	if C.cs_set_frame(win, C.double(fx), C.double(fy), C.double(fw), C.double(fh)) != 1 {
-		return joinNote(note, "this window can't be moved"), nil
+	// Apps may still be animating or restoring their window, which can undo
+	// a move; set the frame until it sticks.
+	placed := poll(ctx, 2500*time.Millisecond, func() bool {
+		C.cs_set_frame(win, C.double(fx), C.double(fy), C.double(fw), C.double(fh))
+		time.Sleep(120 * time.Millisecond)
+		var gx, gy, gw, gh C.double
+		if C.cs_get_frame(win, &gx, &gy, &gw, &gh) != 1 {
+			return false
+		}
+		return near(float64(gx), fx) && near(float64(gy), fy) && near(float64(gw), fw) && near(float64(gh), fh)
+	})
+	if !placed {
+		var gx, gy, gw, gh C.double
+		C.cs_get_frame(win, &gx, &gy, &gw, &gh)
+		if !near(float64(gx), fx) || !near(float64(gy), fy) {
+			return joinNote(note, "this window couldn't be moved into place"), nil
+		}
+		// Position held but size didn't: the app has a minimum or fixed size.
+		return joinNote(note, "this app keeps its own window size"), nil
 	}
 	return note, nil
+}
+
+func near(a, b float64) bool {
+	d := a - b
+	return d > -3 && d < 3
 }
 
 func (a *Arranger) open(ctx context.Context, rsc cue.Resource, path string) error {
