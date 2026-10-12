@@ -1,6 +1,6 @@
 import { ArrowRight, Pin, PinOff, Undo2 } from "lucide-react";
 import { useRef, useState } from "react";
-import { CueService, displayName, errorMessage, ResourceType, timeAgo, type AISettings, type Cue, type Proposal } from "../api";
+import { CueService, displayName, newestKind, errorMessage, ResourceType, timeAgo, type AISettings, type Cue, type Proposal } from "../api";
 import { applyEdit, cueCommands, parseCommand } from "../commands";
 import { usePrefs } from "../prefs";
 import { useProposal } from "../useProposal";
@@ -237,6 +237,12 @@ function target(r: Cue["resources"][number]): string {
     case ResourceType.TypeApp:
       return r.app?.name || r.app?.bundleId || "";
     default:
-      return [r.path, r.openWith?.name && `in ${r.openWith.name}`].filter(Boolean).join(" ");
+      return [
+        r.newest && `${newestKind(r.extensions).toLowerCase()} in`,
+        r.path,
+        r.openWith?.name && `in ${r.openWith.name}`,
+      ]
+        .filter(Boolean)
+        .join(" ");
   }
 }

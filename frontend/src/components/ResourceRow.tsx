@@ -1,8 +1,8 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { AlertTriangle, GripVertical, HelpCircle, Trash2, X } from "lucide-react";
+import { AlertTriangle, Clock, GripVertical, HelpCircle, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { displayName, normalizeURL, Resource, ResourceType, SystemService } from "../api";
+import { displayName, normalizeURL, parseExtensions, Resource, ResourceType, SystemService } from "../api";
 import { AppPicker } from "./AppPicker";
 import { Button, IconButton, Input, TypeIcon, typeNames } from "./ui";
 
@@ -109,6 +109,7 @@ export function ResourceRow({
                   Not found on this Mac
                 </p>
               )}
+              {r.type === ResourceType.TypeFolder && <NewestOption resource={r} onChange={update} />}
               <div className="flex items-center gap-2">
                 <span className="shrink-0 pl-1 text-[11px] text-faint">Open with</span>
                 <AppPicker
@@ -140,6 +141,48 @@ export function ResourceRow({
         </div>
       </div>
     </li>
+  );
+}
+
+/**
+ * For folders: open the most recently added or changed file inside instead
+ * of the folder, optionally only certain file types.
+ */
+function NewestOption({ resource: r, onChange }: { resource: Resource; onChange: (patch: Partial<Resource>) => void }) {
+  const [types, setTypes] = useState((r.extensions || []).join(", "));
+  useEffect(() => setTypes((r.extensions || []).join(", ")), [r.extensions]);
+  const commit = () => {
+    const extensions = parseExtensions(types);
+    setTypes(extensions.join(", "));
+    if (extensions.join() !== (r.extensions || []).join()) onChange({ extensions });
+  };
+  return (
+    <div className={`rounded-lg px-1 ${r.newest ? "bg-fill/60 py-1.5 pr-1.5" : ""}`}>
+      <label className="flex cursor-pointer items-center gap-2 text-[12px] text-graphite">
+        <input
+          type="checkbox"
+          checked={!!r.newest}
+          onChange={(e) => onChange({ newest: e.target.checked, extensions: e.target.checked ? r.extensions : [] })}
+          className="size-3.5 accent-[var(--red)]"
+        />
+        <Clock className="size-3 text-faint" />
+        <span className={r.newest ? "font-medium text-ink" : ""}>Open the newest file inside, not the folder</span>
+      </label>
+      {r.newest && (
+        <div className="mt-1.5 flex items-center gap-2 pl-[22px]">
+          <span className="shrink-0 text-[11px] text-faint">Only</span>
+          <Input
+            value={types}
+            onChange={(e) => setTypes(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => e.key === "Enter" && commit()}
+            placeholder="Any file, or types like pdf, docx"
+            aria-label="Only these file types"
+            className="h-7 font-mono text-xs"
+          />
+        </div>
+      )}
+    </div>
   );
 }
 

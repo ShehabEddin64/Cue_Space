@@ -76,7 +76,7 @@ export const Composer = forwardRef<
   // Show a different idea every few seconds while the composer is empty.
   useEffect(() => {
     if (!empty || busy || ideas.length < 2) return;
-    const t = setTimeout(() => setIdea((i) => (i + 1) % ideas.length), 4500);
+    const t = setTimeout(() => setIdea((i) => (i + 1) % ideas.length), 9000);
     return () => clearTimeout(t);
   }, [empty, busy, idea, ideas.length]);
 

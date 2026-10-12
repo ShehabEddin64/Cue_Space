@@ -56,6 +56,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 	"unsafe"
 
 	"howett.net/plist"
@@ -93,6 +94,34 @@ func (Launcher) OpenPath(ctx context.Context, path string, with *cue.AppRef) err
 		}
 	}
 	return run(ctx, "open", "-a", with.Name, path)
+}
+
+// SearchFiles finds files and folders under root whose name contains query,
+// using Spotlight. Hidden items and anything inside a Library folder are
+// skipped. At most limit paths are returned.
+func SearchFiles(ctx context.Context, root, query string, limit int) ([]string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "mdfind", "-onlyin", root, "-name", query).Output()
+	if err != nil && len(out) == 0 {
+		return nil, fmt.Errorf("Spotlight search failed: %w", err)
+	}
+	var paths []string
+	for _, p := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if p == "" || strings.Contains(p, "/.") || strings.Contains(p, "/Library/") {
+			continue
+		}
+		paths = append(paths, p)
+		if len(paths) == limit {
+			break
+		}
+	}
+	return paths, nil
+}
+
+// OpenCueSpaceURL hands a cuespace:// link to the app, launching it if needed.
+func OpenCueSpaceURL(ctx context.Context, link string) error {
+	return run(ctx, "open", "-g", link)
 }
 
 // Reveal shows path selected in Finder.

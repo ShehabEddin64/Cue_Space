@@ -352,3 +352,23 @@ func TestGeminiModelFilter(t *testing.T) {
 		t.Errorf("Gemini Models = %q, %v", ids, err)
 	}
 }
+
+func TestProposeNewestFile(t *testing.T) {
+	answer := `{"name":"Paperwork","icon":"🧾","description":"","notes":"","resources":[
+	  {"type":"folder","label":"","url":null,"appName":null,"path":"~/Downloads","openWithName":null,"newest":true,"extensions":".PDF, docx","needsInput":null},
+	  {"type":"folder","label":"","url":null,"appName":null,"path":"~/Documents","openWithName":null,"newest":null,"extensions":"pdf","needsInput":null}]}`
+	prop, err := Propose(context.Background(), &fakeProvider{answer: answer}, "my latest PDF download and Documents", nil, installed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dl, docs := prop.Cue.Resources[0], prop.Cue.Resources[1]
+	if !dl.Newest || strings.Join(dl.Extensions, ",") != "pdf,docx" || dl.DisplayName() != "Newest PDF or DOCX in Downloads" {
+		t.Errorf("downloads = %+v (%s)", dl, dl.DisplayName())
+	}
+	if docs.Newest || docs.Extensions != nil {
+		t.Errorf("documents should open the folder: %+v", docs)
+	}
+	if err := prop.Cue.Validate(); err != nil {
+		t.Errorf("validate: %v", err)
+	}
+}

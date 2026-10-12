@@ -17,6 +17,7 @@ import { CueDetail } from "./components/CueDetail";
 import { CustomizeHome } from "./components/CustomizeHome";
 import { Editor, type EditorSession } from "./components/Editor";
 import { Home, type HomeHandle } from "./components/Home";
+import { ConnectSheet } from "./components/ConnectSheet";
 import { Library } from "./components/Library";
 import { Recents } from "./components/Recents";
 import { RunToast, type RunReport } from "./components/RunToast";
@@ -34,7 +35,7 @@ type View =
   | { kind: "cue"; id: string }
   | { kind: "edit"; session: EditorSession; back: View };
 
-type Sheet = "settings" | "customize" | "shortcuts" | "tour" | null;
+type Sheet = "settings" | "customize" | "shortcuts" | "tour" | "connect" | null;
 
 function loadSidebarPref(): boolean {
   try {
@@ -177,6 +178,8 @@ function Shell() {
         return setSheet("customize");
       case "tour":
         return setSheet("tour");
+      case "connect":
+        return setSheet("connect");
       case "shortcuts":
         return setSheet("shortcuts");
       case "find":
@@ -344,8 +347,10 @@ function Shell() {
             setSheet(null);
           }}
           onSaved={onAISaved}
+          onConnectApps={() => setSheet("connect")}
         />
       )}
+      {sheet === "connect" && <ConnectSheet onClose={() => setSheet(null)} />}
       {sheet === "customize" && <CustomizeHome onClose={() => setSheet(null)} />}
       {sheet === "shortcuts" && <ShortcutsSheet onClose={() => setSheet(null)} />}
       {sheet === "tour" && (

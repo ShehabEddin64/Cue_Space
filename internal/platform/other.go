@@ -23,6 +23,10 @@ func Reveal(string) error                                            { return Er
 func MoveToTrash(string) error                                       { return ErrUnsupported }
 func AppDirs() []string                                              { return nil }
 func InstalledApps([]string) []App                                   { return nil }
+func SearchFiles(context.Context, string, string, int) ([]string, error) {
+	return nil, ErrUnsupported
+}
+func OpenCueSpaceURL(context.Context, string) error { return ErrUnsupported }
 
 // Arranger is a placeholder until window placement exists on other systems.
 type Arranger struct {

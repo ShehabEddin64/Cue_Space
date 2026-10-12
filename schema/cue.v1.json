@@ -68,7 +68,13 @@
         "url": { "type": "string", "description": "For type url. Any scheme except javascript: and file:." },
         "app": { "$ref": "#/$defs/appRef", "description": "For type app." },
         "path": { "type": "string", "description": "For type file or folder. Absolute, or starting with ~/." },
-        "openWith": { "$ref": "#/$defs/appRef", "description": "For type file or folder: the app to open it with." }
+        "openWith": { "$ref": "#/$defs/appRef", "description": "For type file or folder: the app to open it with." },
+        "newest": { "type": "boolean", "description": "For type folder: open the most recently added or changed file inside it instead of the folder." },
+        "extensions": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^\\.?[A-Za-z0-9_+-]+$" },
+          "description": "With newest: only consider these file types, e.g. [\"pdf\"]."
+        }
       },
       "allOf": [
         { "if": { "properties": { "type": { "const": "url" } } }, "then": { "required": ["url"] } },

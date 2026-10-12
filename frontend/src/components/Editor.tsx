@@ -51,6 +51,11 @@ export function Editor({
   const [confirm, setConfirm] = useState<"discard" | "delete" | null>(session.askDelete ? "delete" : null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  // Missing values (no name yet, an empty link) are only pointed out once
+  // someone tries to save, so a new Cue or a just-added item doesn't greet
+  // you with errors. A name typed and then cleared shows its hint right away.
+  const [nameTouched, setNameTouched] = useState(false);
+  const [triedSave, setTriedSave] = useState(false);
 
   const dirty = useMemo(() => !saved || JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
 
@@ -63,6 +68,12 @@ export function Editor({
     const t = setTimeout(() => CueService.Problems(draft).then(setProblems), 200);
     return () => clearTimeout(t);
   }, [draft]);
+
+  const nameMissing = problems.includes(NAME_MISSING);
+  const showNameProblem = nameMissing && (nameTouched || triedSave);
+  // The name has its own hint under the field; everything else is listed.
+  const otherProblems = problems.filter((p) => p !== NAME_MISSING && (triedSave || !p.endsWith(MISSING)));
+  const missingCount = problems.filter((p) => p.endsWith(MISSING)).length;
 
   const set = (patch: Partial<Cue>) => setDraft((d) => new Cue({ ...d, ...patch }));
   const setResources = (fn: (rs: Resource[]) => Resource[]) => setDraft((d) => new Cue({ ...d, resources: fn(d.resources) }));
@@ -89,6 +100,16 @@ export function Editor({
     }
   }, [draft, onSaved]);
 
+  // Save, or point at what's missing first.
+  const trySave = useCallback(() => {
+    if (missingCount > 0) {
+      setTriedSave(true);
+      if (nameMissing) nameRef.current?.focus();
+      return;
+    }
+    if (problems.length === 0 && dirty) save();
+  }, [missingCount, nameMissing, problems, dirty, save]);
+
   const close = useCallback(() => (dirty && !confirm ? setConfirm("discard") : onClose()), [dirty, confirm, onClose]);
 
   // ⌘S saves, Esc cancels, pasting a URL anywhere adds a link.
@@ -96,7 +117,7 @@ export function Editor({
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
-        if (problems.length === 0 && dirty) save();
+        trySave();
       } else if (e.key === "Escape" && !document.querySelector("[role=dialog]")) {
         close();
       }
@@ -115,7 +136,7 @@ export function Editor({
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("paste", onPaste);
     };
-  }, [problems, dirty, save, close, add]);
+  }, [trySave, close, add]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -166,9 +187,9 @@ export function Editor({
                 variant="primary"
                 size="sm"
                 busy={saving}
-                disabled={!dirty || problems.length > 0}
-                onClick={save}
-                title={problems.length ? "Fix the issues below first" : "Save (⌘S)"}
+                disabled={!dirty || otherProblems.length > 0 || showNameProblem}
+                onClick={trySave}
+                title={otherProblems.length ? "Fix the issues below first" : showNameProblem ? "Name this Cue first" : "Save (⌘S)"}
               >
                 Save
               </Button>
@@ -203,9 +224,13 @@ export function Editor({
               <input
                 ref={nameRef}
                 value={draft.name}
-                onChange={(e) => set({ name: e.target.value })}
+                onChange={(e) => {
+                  set({ name: e.target.value });
+                  if (e.target.value.trim()) setNameTouched(true);
+                }}
                 placeholder="Name this Cue"
                 aria-label="Name"
+                aria-invalid={showNameProblem}
                 spellCheck={false}
                 className="w-full bg-transparent text-[28px] font-semibold tracking-[-0.025em] placeholder:text-faint focus:outline-none"
               />
@@ -216,6 +241,7 @@ export function Editor({
                 aria-label="Description"
                 className="mt-0.5 w-full bg-transparent text-[15px] text-graphite placeholder:text-faint focus:outline-none"
               />
+              {showNameProblem && <p className="mt-1 text-[12px] font-medium text-red-text">Give this Cue a name to save it.</p>}
             </div>
           </div>
 
@@ -270,10 +296,10 @@ export function Editor({
             <LayoutEditor cue={draft} onChange={(layout) => set({ layout })} />
           </div>
 
-          {(problems.length > 0 || error) && (
+          {(otherProblems.length > 0 || error) && (
             <div className="mt-6 space-y-1 rounded-2xl bg-fill/70 px-4 py-3 text-[12px]">
               {error && <p className="font-medium text-red-text">{error}</p>}
-              {problems.map((p) => (
+              {otherProblems.map((p) => (
                 <p key={p} className="text-graphite">
                   {p}
                 </p>
@@ -285,6 +311,11 @@ export function Editor({
     </div>
   );
 }
+
+// How Go's validation words values that aren't filled in yet
+// (internal/cue/validate.go).
+const MISSING = " is missing";
+const NAME_MISSING = "Name" + MISSING;
 
 function ConfirmBar({ text, action, onConfirm, onCancel }: { text: string; action: string; onConfirm: () => void; onCancel: () => void }) {
   return (

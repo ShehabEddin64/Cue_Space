@@ -19,6 +19,7 @@ import (
 	"github.com/ShehabEddin64/Cue_Space/internal/secrets"
 	"github.com/ShehabEddin64/Cue_Space/internal/settings"
 	"github.com/ShehabEddin64/Cue_Space/internal/store"
+	"github.com/ShehabEddin64/Cue_Space/internal/tools"
 	"github.com/ShehabEddin64/Cue_Space/services"
 )
 
@@ -28,14 +29,11 @@ var assets embed.FS
 // dataDir is where Cue Space keeps the user's Cues and settings. Set
 // CUESPACE_DIR to use another folder (handy for development).
 func dataDir() string {
-	if d := os.Getenv("CUESPACE_DIR"); d != "" {
-		return d
-	}
-	base, err := os.UserConfigDir() // ~/Library/Application Support on macOS
+	dir, err := tools.DataDir()
 	if err != nil {
 		log.Fatal(err)
 	}
-	return filepath.Join(base, "CueSpace")
+	return dir
 }
 
 func main() {
@@ -77,6 +75,7 @@ func main() {
 			application.NewService(system),
 			application.NewService(aiService),
 			application.NewService(prefsService),
+			application.NewService(&services.ConnectService{Home: home}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -168,6 +167,7 @@ func menuBar(app *application.App, cues *store.Store, prefs *settings.File) (*ap
 	file.Add("New Cue…").SetAccelerator("CmdOrCtrl+N").OnClick(send("new-cue"))
 	file.Add("New Cue Manually").SetAccelerator("CmdOrCtrl+Alt+N").OnClick(send("new-blank-cue"))
 	file.AddSeparator()
+	file.Add("Connect AI Apps…").OnClick(send("connect"))
 	file.Add("Show Cues Folder in Finder").OnClick(send("reveal-folder"))
 	file.AddSeparator()
 	file.AddRole(application.CloseWindow)

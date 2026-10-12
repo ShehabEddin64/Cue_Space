@@ -3,6 +3,7 @@ package cue
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -130,5 +131,28 @@ func TestURLDisplayName(t *testing.T) {
 		if got := (Resource{Type: TypeURL, URL: u}).DisplayName(); got != want {
 			t.Errorf("DisplayName(%q) = %q, want %q", u, got, want)
 		}
+	}
+}
+
+func TestValidateMissingValues(t *testing.T) {
+	c := Cue{SchemaVersion: SchemaVersion, Resources: []Resource{
+		{ID: "a", Type: TypeURL},
+		{ID: "b", Type: TypeApp},
+		{ID: "c", Type: TypeFolder, Label: "Notes"},
+		{ID: "d", Type: TypeURL, URL: "example"},
+	}}
+	var ve *ValidationError
+	if !errors.As(c.Validate(), &ve) {
+		t.Fatal("want a ValidationError")
+	}
+	want := []string{
+		NameMissing,
+		"Item 1: link is missing",
+		"Item 2: app is missing",
+		"Item 3 (Notes): folder is missing",
+		`Item 4 (example): "example" is not a full URL (include https://)`,
+	}
+	if !reflect.DeepEqual(ve.Problems, want) {
+		t.Errorf("problems =\n%q\nwant\n%q", ve.Problems, want)
 	}
 }

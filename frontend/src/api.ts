@@ -1,12 +1,13 @@
 // One place to import the generated Go bindings from.
 export {
   AIService,
+  ConnectService,
   CueService,
   PrefsService,
   SystemService,
 } from "../bindings/github.com/ShehabEddin64/Cue_Space/services";
 export { HomePrefs, HomeSection, Prefs } from "../bindings/github.com/ShehabEddin64/Cue_Space/internal/settings";
-export type { AISettings, Library } from "../bindings/github.com/ShehabEddin64/Cue_Space/services";
+export type { AISettings, Connections, Library } from "../bindings/github.com/ShehabEddin64/Cue_Space/services";
 export {
   AppRef,
   Arrangement,
@@ -62,10 +63,28 @@ export function displayName(r: Resource): string {
     case ResourceType.TypeFile:
     case ResourceType.TypeFolder: {
       const parts = (r.path || "").replace(/\/+$/, "").split("/");
-      return parts[parts.length - 1] || (r.type === ResourceType.TypeFile ? "File" : "Folder");
+      const name = parts[parts.length - 1] || (r.type === ResourceType.TypeFile ? "File" : "Folder");
+      return r.type === ResourceType.TypeFolder && r.newest ? `${newestKind(r.extensions)} in ${name}` : name;
     }
   }
   return "Item";
+}
+
+/** "Newest file", "Newest PDF" or "Newest PDF or DOCX" (mirrors Go's NewestKind). */
+export function newestKind(exts?: string[]): string {
+  const e = (exts || []).map((x) => x.toUpperCase());
+  if (!e.length) return "Newest file";
+  return e.length === 1 ? `Newest ${e[0]}` : `Newest ${e.slice(0, -1).join(", ")} or ${e[e.length - 1]}`;
+}
+
+/** "pdf, .DOCX" → ["pdf", "docx"] */
+export function parseExtensions(text: string): string[] {
+  const out: string[] = [];
+  for (const raw of text.split(/[\s,]+/)) {
+    const e = raw.replace(/^[*.]+/, "").toLowerCase();
+    if (e && !out.includes(e)) out.push(e);
+  }
+  return out;
 }
 
 export function timeAgo(iso?: string): string {

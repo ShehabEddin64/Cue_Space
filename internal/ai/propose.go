@@ -30,6 +30,8 @@ type draftResource struct {
 	AppName      *string `json:"appName"`
 	Path         *string `json:"path"`
 	OpenWithName *string `json:"openWithName"`
+	Newest       *bool   `json:"newest"`
+	Extensions   *string `json:"extensions"`
 	NeedsInput   *string `json:"needsInput"`
 }
 
@@ -40,7 +42,7 @@ func nullableString(desc string) map[string]any {
 var resourceSchema = map[string]any{
 	"type":                 "object",
 	"additionalProperties": false,
-	"required":             []string{"type", "label", "url", "appName", "path", "openWithName", "needsInput"},
+	"required":             []string{"type", "label", "url", "appName", "path", "openWithName", "newest", "extensions", "needsInput"},
 	"properties": map[string]any{
 		"type":         map[string]any{"type": "string", "enum": []string{"url", "app", "file", "folder"}},
 		"label":        map[string]any{"type": "string", "description": "What the user calls it, e.g. \"GitHub\" or \"Textbook\"."},
@@ -48,7 +50,12 @@ var resourceSchema = map[string]any{
 		"appName":      nullableString("For app: the exact name from the installed list."),
 		"path":         nullableString("For file/folder: an absolute path or one starting with ~/. Only if the user gave it."),
 		"openWithName": nullableString("For file/folder: the app to open it with, from the installed list."),
-		"needsInput":   nullableString("If a required detail is unknown (a path, a private URL), a short question for the user. Otherwise null."),
+		"newest": map[string]any{
+			"anyOf":       []any{map[string]any{"type": "boolean"}, map[string]any{"type": "null"}},
+			"description": "For folder: true to open the most recent file inside it instead of the folder.",
+		},
+		"extensions": nullableString("With newest: file types to consider, comma-separated without dots, e.g. \"pdf\". Null for any file."),
+		"needsInput": nullableString("If a required detail is unknown (a path, a private URL), a short question for the user. Otherwise null."),
 	},
 }
 
@@ -71,7 +78,7 @@ A Cue is a saved context for one activity, such as working on a project or study
 - url: a web page or a deep link (https://, http://localhost:3000, obsidian://, vscode://, ...)
 - app: an installed application
 - file: a document on disk
-- folder: a folder on disk, optionally opened with an app (a code project opened in an IDE is a folder with openWith set to the IDE)
+- folder: a folder on disk, optionally opened with an app (a code project opened in an IDE is a folder with openWith set to the IDE). With newest true, it opens the most recent file in the folder instead, e.g. "my latest download" is ~/Downloads with newest true, and "the newest PDF in Downloads" also sets extensions "pdf".
 
 Rules:
 - Only use apps from the installed list below, with their exact name. Map generic words to what is installed: "IDE" or "editor" means the code editor they have (Cursor, VS Code, Zed, Xcode, ...), "browser" means their browser, "Claude" means the Claude app if installed, otherwise https://claude.ai.
@@ -203,6 +210,12 @@ func compactCue(c cue.Cue) string {
 			}
 		case cue.TypeFile, cue.TypeFolder:
 			fmt.Fprintf(&b, " %s", r.Path)
+			if r.Newest {
+				b.WriteString(" newest")
+				if len(r.Extensions) > 0 {
+					fmt.Fprintf(&b, "=%s", strings.Join(r.Extensions, ","))
+				}
+			}
 			if r.OpenWith != nil {
 				fmt.Fprintf(&b, " with=%s", r.OpenWith.Name)
 			}
@@ -251,6 +264,10 @@ func (d draft) toProposal(apps []platform.App) Proposal {
 			}
 		case cue.TypeFile, cue.TypeFolder:
 			r.Path = str(dr.Path)
+			if r.Type == cue.TypeFolder && dr.Newest != nil && *dr.Newest {
+				r.Newest = true
+				r.Extensions = strings.Split(str(dr.Extensions), ",")
+			}
 			if name := str(dr.OpenWithName); name != "" {
 				app, ok := resolveApp(apps, "", name)
 				r.OpenWith = app

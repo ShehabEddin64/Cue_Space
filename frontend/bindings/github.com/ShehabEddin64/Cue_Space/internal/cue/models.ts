@@ -305,6 +305,18 @@ export class Resource {
      */
     "openWith"?: AppRef | null;
 
+    /**
+     * Newest opens the most recently added or changed file directly inside
+     * the folder instead of the folder itself. Type folder only.
+     */
+    "newest"?: boolean;
+
+    /**
+     * Extensions limits Newest to these file types, e.g. ["pdf"]. Empty
+     * means any file.
+     */
+    "extensions"?: string[];
+
     /** Creates a new Resource instance. */
     constructor($$source: Partial<Resource> = {}) {
         if (!("id" in $$source)) {
@@ -323,12 +335,16 @@ export class Resource {
     static createFrom($$source: any = {}): Resource {
         const $$createField5_0 = $$createType10;
         const $$createField7_0 = $$createType10;
+        const $$createField9_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("app" in $$parsedSource) {
             $$parsedSource["app"] = $$createField5_0($$parsedSource["app"]);
         }
         if ("openWith" in $$parsedSource) {
             $$parsedSource["openWith"] = $$createField7_0($$parsedSource["openWith"]);
+        }
+        if ("extensions" in $$parsedSource) {
+            $$parsedSource["extensions"] = $$createField9_0($$parsedSource["extensions"]);
         }
         return new Resource($$parsedSource as Partial<Resource>);
     }

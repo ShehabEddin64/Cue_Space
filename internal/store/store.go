@@ -122,6 +122,13 @@ func (s *Store) Get(id string) (cue.Cue, error) {
 	return cue.Parse(data)
 }
 
+// PathOf returns the file a Cue is stored in.
+func (s *Store) PathOf(id string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.pathFor(id)
+}
+
 // pathFor finds the file for id, rescanning once in case it was added by hand.
 func (s *Store) pathFor(id string) (string, error) {
 	if p, ok := s.paths[id]; ok {

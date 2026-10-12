@@ -106,9 +106,12 @@ func (r *Runner) Run(ctx context.Context, c cue.Cue) Result {
 			step.Status, step.Error = StatusSkipped, "cancelled"
 		default:
 			stepCtx, cancel := context.WithTimeout(ctx, timeout)
-			if err := r.open(stepCtx, rsc); err != nil {
+			path, err := r.open(stepCtx, rsc)
+			if err != nil {
 				step.Status, step.Error = StatusFailed, err.Error()
 				res.OK = false
+			} else {
+				step.Note = openedNote(rsc, path)
 			}
 			cancel()
 		}
@@ -177,6 +180,9 @@ func (r *Runner) arrange(ctx context.Context, c cue.Cue, res *Result, timeout ti
 				note, err = r.Arranger.Place(stepCtx, it.rsc, path, it.slot, d.Arrangement == cue.ArrangeFullScreen)
 				cancel()
 				step.Note = describePlacement(info, k, d.Arrangement, where)
+				if opened := openedNote(it.rsc, path); opened != "" {
+					step.Note = opened + " · " + step.Note
+				}
 				if note != "" {
 					step.Note += " · " + note
 				}
@@ -200,8 +206,16 @@ func describePlacement(info cue.ArrangementInfo, k int, a cue.Arrangement, where
 	return fmt.Sprintf("%s, slot %d, on %s", info.Title, k+1, where)
 }
 
+// openedNote names the file a "newest file" folder opened.
+func openedNote(rsc cue.Resource, path string) string {
+	if rsc.Type == cue.TypeFolder && rsc.Newest && path != "" {
+		return "Opened " + filepath.Base(path)
+	}
+	return ""
+}
+
 // checkTarget validates a resource before opening it and returns the expanded
-// path for files and folders.
+// path for files and folders (for a "newest file" folder, that file).
 func (r *Runner) checkTarget(rsc cue.Resource) (string, error) {
 	switch rsc.Type {
 	case cue.TypeApp:
@@ -222,25 +236,29 @@ func (r *Runner) checkTarget(rsc cue.Resource) (string, error) {
 		if rsc.Type == cue.TypeFolder && !info.IsDir() {
 			return "", fmt.Errorf("expected a folder but found a file: %s", rsc.Path)
 		}
+		if rsc.Type == cue.TypeFolder && rsc.Newest {
+			return NewestFile(path, rsc.Extensions)
+		}
 		return path, nil
 	}
 	return "", nil
 }
 
-func (r *Runner) open(ctx context.Context, rsc cue.Resource) error {
+// open opens one resource and returns the path it opened, if any.
+func (r *Runner) open(ctx context.Context, rsc cue.Resource) (string, error) {
 	path, err := r.checkTarget(rsc)
 	if err != nil {
-		return err
+		return "", err
 	}
 	switch rsc.Type {
 	case cue.TypeURL:
-		return r.Launcher.OpenURL(ctx, rsc.URL)
+		return "", r.Launcher.OpenURL(ctx, rsc.URL)
 	case cue.TypeApp:
-		return r.Launcher.OpenApp(ctx, *rsc.App)
+		return "", r.Launcher.OpenApp(ctx, *rsc.App)
 	case cue.TypeFile, cue.TypeFolder:
-		return r.Launcher.OpenPath(ctx, path, rsc.OpenWith)
+		return path, r.Launcher.OpenPath(ctx, path, rsc.OpenWith)
 	}
-	return fmt.Errorf("unknown resource type %q", rsc.Type)
+	return "", fmt.Errorf("unknown resource type %q", rsc.Type)
 }
 
 // ExpandHome turns "~" and "~/x" into paths under home.

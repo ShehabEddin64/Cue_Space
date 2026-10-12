@@ -53,6 +53,31 @@ Keyboard: your first nine Cues get **⌘1–⌘9** (pinned first). The Cues menu
 
 **Widget and links.** A "Cues" widget for the desktop and Notification Center starts a Cue in one click, and `cuespace://start/<id>` links work from Shortcuts, Raycast or Alfred. See [docs/widgets.md](docs/widgets.md).
 
+## Build Cues from Claude or ChatGPT (MCP) and the terminal
+
+Cue Space ships with `cuespace-cli`, a command-line tool that is also an [MCP](https://modelcontextprotocol.io) server. Connect it to an AI app and build richer Cues by chatting: "Make a Cue for studying math: Moodle, the newest PDF in my Downloads, and my Math folder in VS Code, with Moodle and the PDF side by side on a new desktop."
+
+Open **File › Connect AI Apps…** (or Settings › Connect…):
+
+- **Claude Desktop:** one click adds Cue Space to Claude's settings (your other servers are kept, and the original file is saved next to it as `.before-cuespace`). Restart Claude to load it.
+- **Claude Code:** `claude mcp add --scope user cuespace -- "/Applications/Cue Space.app/Contents/MacOS/cuespace-cli" mcp` (the sheet shows the exact path).
+- **ChatGPT:** it connects to tools by web address, so run `cuespace-cli mcp --http` and expose port 8765 through a tunnel. Every request needs the secret in the address. Keep it private and stop the server when you're done.
+
+The AI gets these tools: `list_cues`, `get_cue`, `create_cue`, `update_cue`, `delete_cue` (moves to the Trash), `start_cue`, `list_apps`, `search_files` and `check_paths`. Changes go through the same validation as the app. Apps must be installed and are matched by name. Starting a Cue is handed to the app, so it runs exactly like clicking Start: layouts, permissions and the run report included.
+
+From the terminal:
+
+```bash
+cuespace-cli list
+cuespace-cli show math
+cuespace-cli start math
+cuespace-cli create cue.json            # or pipe JSON in
+cuespace-cli apps code
+cuespace-cli search "linear algebra"
+```
+
+Run `cuespace-cli help` for the JSON format.
+
 ## Your Cues are files
 
 Each Cue is one JSON file in `~/Library/Application Support/CueSpace/cues/`. Read it, edit it in any editor (the app updates live), back it up, sync it, or put it in git. The format is defined by [`schema/cue.v1.json`](schema/cue.v1.json).
@@ -73,7 +98,7 @@ Each Cue is one JSON file in `~/Library/Application Support/CueSpace/cues/`. Rea
 }
 ```
 
-Resource types are `url` (any scheme, including deep links such as `obsidian://`), `app`, `file` and `folder`. Files and folders can name an `openWith` app. Shell commands are deliberately not supported yet.
+Resource types are `url` (any scheme, including deep links such as `obsidian://`), `app`, `file` and `folder`. Files and folders can name an `openWith` app. A folder with `"newest": true` opens the most recently added or changed file inside it instead (your latest download, the newest scan), optionally only certain types: `"extensions": ["pdf"]`. Shell commands are deliberately not supported yet.
 
 API keys are stored in the macOS Keychain, never in these files.
 
@@ -145,7 +170,7 @@ Two rules keep the product predictable:
 Shortcut → Workspace → Context → Continue.
 
 - **Now:** Start a Cue to open everything you need.
-- **Next:** global-hotkey quick launcher; a `cue` CLI and `cuespace://start/atlas` deep links (for Raycast, Shortcuts and the terminal); Windows and Linux.
+- **Next:** global-hotkey quick launcher; Windows and Linux.
 - **Then:** window layouts and a dedicated browser window per Cue.
 - **Eventually:** *Continue Atlas* puts you back where you left off: restored tabs, files and editor state.
 

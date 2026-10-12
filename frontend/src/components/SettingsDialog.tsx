@@ -30,7 +30,17 @@ const appearances: [string, string][] = [
   ["dark", "Dark"],
 ];
 
-export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; onClose: () => void; onSaved: (s: AISettings) => void }) {
+export function SettingsDialog({
+  folder,
+  onClose,
+  onSaved,
+  onConnectApps,
+}: {
+  folder: string;
+  onClose: () => void;
+  onSaved: (s: AISettings) => void;
+  onConnectApps: () => void;
+}) {
   const { prefs, save: savePrefs } = usePrefs();
   const [loaded, setLoaded] = useState<AISettings | null>(null);
   const [provider, setProvider] = useState<Provider>("anthropic");
@@ -326,6 +336,18 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
             : "Without an AI you can still build and start Cues by hand. Nothing about starting a Cue depends on AI."}
         </span>
       </p>
+
+      <section className="mt-6">
+        <Label>Use Cue Space from other AI apps</Label>
+        <div className="flex items-center gap-3 rounded-xl border border-hairline px-3 py-2.5">
+          <p className="min-w-0 flex-1 text-[12px] leading-relaxed text-graphite">
+            Build Cues by chatting with Claude Desktop, Claude Code or ChatGPT, through Cue Space’s MCP server.
+          </p>
+          <Button size="sm" onClick={onConnectApps}>
+            Connect…
+          </Button>
+        </div>
+      </section>
 
       <section className="mt-6">
         <Label>Your Cues</Label>

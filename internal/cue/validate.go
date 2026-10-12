@@ -22,6 +22,13 @@ func (e *ValidationError) Error() string {
 	return "invalid cue: " + strings.Join(e.Problems, "; ")
 }
 
+// Problems about a value that hasn't been filled in yet end with this, so
+// the editor can wait until someone tries to save before pointing them out.
+const missing = " is missing"
+
+// NameMissing is the problem reported for a Cue without a name.
+const NameMissing = "Name" + missing
+
 // Validate checks that a Cue is well formed. It does not touch the filesystem:
 // whether a path exists is decided when the Cue runs.
 func (c *Cue) Validate() error {
@@ -30,11 +37,14 @@ func (c *Cue) Validate() error {
 		p = append(p, fmt.Sprintf("unsupported schemaVersion %d", c.SchemaVersion))
 	}
 	if strings.TrimSpace(c.Name) == "" {
-		p = append(p, "name is required")
+		p = append(p, NameMissing)
 	}
 	ids := map[string]bool{}
 	for i, r := range c.Resources {
-		where := fmt.Sprintf("resource %d (%s)", i+1, r.DisplayName())
+		where := fmt.Sprintf("Item %d", i+1)
+		if name := r.DisplayName(); name != "" && name != string(r.Type) {
+			where += " (" + name + ")"
+		}
 		if r.ID == "" {
 			p = append(p, where+": id is required")
 		} else if ids[r.ID] {
@@ -44,16 +54,18 @@ func (c *Cue) Validate() error {
 
 		switch r.Type {
 		case TypeURL:
-			if err := checkURL(r.URL); err != nil {
+			if r.URL == "" {
+				p = append(p, where+": link"+missing)
+			} else if err := checkURL(r.URL); err != nil {
 				p = append(p, where+": "+err.Error())
 			}
 		case TypeApp:
 			if r.App.IsZero() {
-				p = append(p, where+": app needs a bundleId or name")
+				p = append(p, where+": app"+missing)
 			}
 		case TypeFile, TypeFolder:
 			if r.Path == "" {
-				p = append(p, where+": path is required")
+				p = append(p, where+": "+string(r.Type)+missing)
 			} else if !strings.HasPrefix(r.Path, "/") && r.Path != "~" && !strings.HasPrefix(r.Path, "~/") {
 				p = append(p, where+": path must be absolute or start with ~/")
 			}
@@ -62,6 +74,9 @@ func (c *Cue) Validate() error {
 		}
 		if r.Type != TypeFile && r.Type != TypeFolder && r.OpenWith != nil {
 			p = append(p, where+": openWith only applies to files and folders")
+		}
+		if r.Newest && r.Type != TypeFolder {
+			p = append(p, where+": newest only applies to folders")
 		}
 	}
 	p = append(p, c.validateLayout()...)

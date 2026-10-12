@@ -44,6 +44,13 @@ type Resource struct {
 	App      *AppRef `json:"app,omitempty"`      // type app
 	Path     string  `json:"path,omitempty"`     // type file, folder
 	OpenWith *AppRef `json:"openWith,omitempty"` // type file, folder
+
+	// Newest opens the most recently added or changed file directly inside
+	// the folder instead of the folder itself. Type folder only.
+	Newest bool `json:"newest,omitempty"`
+	// Extensions limits Newest to these file types, e.g. ["pdf"]. Empty
+	// means any file.
+	Extensions []string `json:"extensions,omitempty"`
 }
 
 // DisplayName is the label if set, otherwise something derived from the target.
@@ -68,11 +75,44 @@ func (r Resource) DisplayName() string {
 	case TypeFile, TypeFolder:
 		p := strings.TrimRight(r.Path, "/")
 		if i := strings.LastIndex(p, "/"); i >= 0 {
-			return p[i+1:]
+			p = p[i+1:]
+		}
+		if r.Type == TypeFolder && r.Newest {
+			return r.NewestKind() + " in " + p
 		}
 		return p
 	}
 	return string(r.Type)
+}
+
+// NewestKind describes what a Newest folder opens: "Newest file",
+// "Newest PDF" or "Newest PDF or DOCX".
+func (r Resource) NewestKind() string {
+	if len(r.Extensions) == 0 {
+		return "Newest file"
+	}
+	exts := make([]string, len(r.Extensions))
+	for i, e := range r.Extensions {
+		exts[i] = strings.ToUpper(e)
+	}
+	if len(exts) == 1 {
+		return "Newest " + exts[0]
+	}
+	return "Newest " + strings.Join(exts[:len(exts)-1], ", ") + " or " + exts[len(exts)-1]
+}
+
+// normalizeExtensions lowercases extensions and drops dots, blanks and repeats.
+func normalizeExtensions(in []string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, e := range in {
+		e = strings.ToLower(strings.TrimLeft(strings.TrimSpace(e), "*."))
+		if e != "" && !seen[e] {
+			seen[e] = true
+			out = append(out, e)
+		}
+	}
+	return out
 }
 
 // Cue is a saved context for an activity.
@@ -118,6 +158,10 @@ func (c *Cue) Normalize() {
 		}
 		if r.OpenWith.IsZero() {
 			r.OpenWith = nil
+		}
+		r.Extensions = normalizeExtensions(r.Extensions)
+		if !r.Newest {
+			r.Extensions = nil
 		}
 	}
 	c.normalizeLayout()

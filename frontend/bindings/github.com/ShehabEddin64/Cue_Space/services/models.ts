@@ -68,6 +68,82 @@ export class AISettings {
 }
 
 /**
+ * Connections describes what is set up, for the Connect sheet.
+ */
+export class Connections {
+    /**
+     * CLI is the path of cuespace-cli, or "" when this build doesn't include it.
+     */
+    "cli": string;
+
+    /**
+     * ClaudeDesktop is true when the Claude app's settings folder exists.
+     */
+    "claudeDesktop": boolean;
+
+    /**
+     * ClaudeDesktopStatus is "none", "added" or "outdated" (added, but
+     * pointing at another copy of Cue Space).
+     */
+    "claudeDesktopStatus": string;
+
+    /**
+     * ClaudeCode is the command that adds Cue Space to Claude Code.
+     */
+    "claudeCode": string;
+
+    /**
+     * HTTPCommand runs the server for URL-based clients such as ChatGPT.
+     */
+    "httpCommand": string;
+
+    /**
+     * HTTPURL is the local address that command serves, including its secret.
+     */
+    "httpUrl": string;
+
+    /**
+     * Terminal is the command that makes `cuespace-cli` available in a shell.
+     */
+    "terminal": string;
+
+    /** Creates a new Connections instance. */
+    constructor($$source: Partial<Connections> = {}) {
+        if (!("cli" in $$source)) {
+            this["cli"] = "";
+        }
+        if (!("claudeDesktop" in $$source)) {
+            this["claudeDesktop"] = false;
+        }
+        if (!("claudeDesktopStatus" in $$source)) {
+            this["claudeDesktopStatus"] = "";
+        }
+        if (!("claudeCode" in $$source)) {
+            this["claudeCode"] = "";
+        }
+        if (!("httpCommand" in $$source)) {
+            this["httpCommand"] = "";
+        }
+        if (!("httpUrl" in $$source)) {
+            this["httpUrl"] = "";
+        }
+        if (!("terminal" in $$source)) {
+            this["terminal"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Connections instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Connections {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Connections($$parsedSource as Partial<Connections>);
+    }
+}
+
+/**
  * Library is everything the Library screen needs.
  */
 export class Library {
