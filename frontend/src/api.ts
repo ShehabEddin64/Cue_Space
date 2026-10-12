@@ -47,8 +47,16 @@ export function newResource(type: ResourceType): Resource {
 export function displayName(r: Resource): string {
   if (r.label) return r.label;
   switch (r.type) {
-    case ResourceType.TypeURL:
+    case ResourceType.TypeURL: {
+      // "moodle.concordia.ca" reads better than a long URL.
+      try {
+        const u = new URL(r.url || "");
+        if ((u.protocol === "http:" || u.protocol === "https:") && u.hostname) return u.hostname.replace(/^www\./, "");
+      } catch {
+        /* not a full URL yet */
+      }
       return r.url || "Link";
+    }
     case ResourceType.TypeApp:
       return r.app?.name || r.app?.bundleId || "App";
     case ResourceType.TypeFile:
@@ -70,6 +78,37 @@ export function timeAgo(iso?: string): string {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   if (s < 86400 * 30) return `${Math.floor(s / 86400)}d ago`;
   return new Date(iso).toLocaleDateString();
+}
+
+/** Cues that have been started, most recent first. */
+export function recentlyUsed<T extends { lastRunAt?: string }>(cues: T[]): T[] {
+  return cues.filter((c) => c.lastRunAt).sort((a, b) => b.lastRunAt!.localeCompare(a.lastRunAt!));
+}
+
+function dayDiff(iso: string): number {
+  const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.round((day(new Date()) - day(new Date(iso))) / 86400000);
+}
+
+/** The heading a start time falls under, like Finder’s Recents. */
+export function recentGroup(iso: string): string {
+  const days = dayDiff(iso);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return "Previous 7 Days";
+  if (days < 30) return "Previous 30 Days";
+  return "Earlier";
+}
+
+/** When a Cue was last started: “2h ago” today, a day and time before that. */
+export function startedLabel(iso: string): string {
+  const d = new Date(iso);
+  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const days = dayDiff(iso);
+  if (days <= 0) return timeAgo(iso);
+  if (days === 1) return `Yesterday at ${time}`;
+  if (days < 7) return `${d.toLocaleDateString(undefined, { weekday: "long" })} at ${time}`;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: days > 300 ? "numeric" : undefined });
 }
 
 /** Where AI requests go, in one honest sentence. */

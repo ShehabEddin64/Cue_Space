@@ -5,9 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"syscall"
@@ -15,38 +15,94 @@ import (
 )
 
 // OpenAICompat talks to any server that implements the OpenAI chat
-// completions API: OpenAI, OpenRouter, Ollama (http://localhost:11434/v1),
-// LM Studio (http://localhost:1234/v1), and others.
+// completions API: OpenAI, Gemini, OpenRouter, Ollama, LM Studio, and others.
 type OpenAICompat struct {
 	baseURL string
 	apiKey  string
 	model   string
-	http    *http.Client
+	vendor  string
+	local   bool
+	// fallbacks are tried, in order, when the chosen model stays busy or is
+	// out of quota. Empty for most servers.
+	fallbacks []string
+	used      string
+	http      *http.Client
 }
 
 func NewOpenAICompat(baseURL, apiKey, model string) *OpenAICompat {
+	base := strings.TrimRight(baseURL, "/")
+	vendor, local := vendorOf(base)
 	return &OpenAICompat{
-		baseURL: strings.TrimRight(baseURL, "/"),
+		baseURL: base,
 		apiKey:  apiKey,
 		model:   model,
+		vendor:  vendor,
+		local:   local,
 		// Local models can be slow on first load.
 		http: &http.Client{Timeout: 5 * time.Minute},
 	}
 }
+
+// vendorOf names the service behind a base URL for messages.
+func vendorOf(base string) (name string, local bool) {
+	u, err := url.Parse(base)
+	if err != nil || u.Hostname() == "" {
+		return "The AI server", false
+	}
+	host := u.Hostname()
+	local = host == "localhost" || host == "127.0.0.1" || host == "::1"
+	switch {
+	case strings.Contains(host, "generativelanguage.googleapis.com") || strings.Contains(base, "generativelanguage.googleapis.com"):
+		return "Gemini", false
+	case strings.HasSuffix(host, "openai.com"):
+		return "OpenAI", false
+	case strings.HasSuffix(host, "openrouter.ai"):
+		return "OpenRouter", false
+	case local && u.Port() == "11434":
+		return "Ollama", true
+	case local && u.Port() == "1234":
+		return "LM Studio", true
+	case local:
+		return "Your local AI server", true
+	}
+	return host, false
+}
+
+// UsedModel is the model that answered the last Complete call; it differs
+// from the configured one when a backup model stepped in.
+func (o *OpenAICompat) UsedModel() string { return o.used }
 
 type chatMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-// Complete asks for JSON matching req.Schema. Servers differ in how much of
+// Complete asks for JSON matching req.Schema. Temporary failures are retried
+// quietly; if the chosen model stays busy (or is out of quota), backup
+// models are tried before giving up with a plain-language error.
+func (o *OpenAICompat) Complete(ctx context.Context, req Request) (string, error) {
+	models := append([]string{o.model}, o.fallbacks...)
+	out, used, err := completeWithBackups(ctx, models, func(model string) (string, error) {
+		return o.completeWith(ctx, model, req)
+	})
+	if err != nil {
+		return "", err
+	}
+	o.used = used
+	return out, nil
+}
+
+// ConfiguredModel is the model chosen in Settings.
+func (o *OpenAICompat) ConfiguredModel() string { return o.model }
+
+// completeWith makes one request to one model. Servers differ in how much of
 // OpenAI's structured output they support, so it steps down: a strict JSON
 // schema, then plain JSON mode with the schema in the prompt, then no
 // response format at all (the answer is still parsed as JSON).
-func (o *OpenAICompat) Complete(ctx context.Context, req Request) (string, error) {
+func (o *OpenAICompat) completeWith(ctx context.Context, model string, req Request) (string, error) {
 	schemaText, _ := json.Marshal(req.Schema)
 	withSchemaInPrompt := req.System + "\n\nAnswer with only a JSON object that matches this JSON Schema:\n" + string(schemaText)
-	attempts := []struct {
+	formats := []struct {
 		system string
 		format map[string]any
 	}{
@@ -64,20 +120,20 @@ func (o *OpenAICompat) Complete(ctx context.Context, req Request) (string, error
 		} `json:"choices"`
 	}
 	var err error
-	for _, a := range attempts {
+	for _, f := range formats {
 		body := map[string]any{
-			"model": o.model,
+			"model": model,
 			"messages": []chatMessage{
-				{Role: "system", Content: a.system},
+				{Role: "system", Content: f.system},
 				{Role: "user", Content: req.User},
 			},
 		}
-		if a.format != nil {
-			body["response_format"] = a.format
+		if f.format != nil {
+			body["response_format"] = f.format
 		}
-		err = o.do(ctx, http.MethodPost, "/chat/completions", body, &resp)
-		var bad *badRequest
-		if !errors.As(err, &bad) {
+		err = o.do(ctx, http.MethodPost, "/chat/completions", model, body, &resp)
+		var e *Error
+		if !errors.As(err, &e) || e.Kind != KindBadRequest {
 			break // success, or a failure a simpler request won't fix
 		}
 	}
@@ -85,32 +141,28 @@ func (o *OpenAICompat) Complete(ctx context.Context, req Request) (string, error
 		return "", err
 	}
 	if len(resp.Choices) == 0 {
-		return "", errors.New("the model returned no answer")
+		return "", &Error{Kind: KindOther, Vendor: o.vendor, Model: model, Detail: "no choices in response"}
 	}
 	if resp.Choices[0].FinishReason == "length" {
-		return "", errors.New("the model's answer was cut off; try a shorter description")
+		return "", errors.New("The answer was cut off. Try a shorter description.")
 	}
 	return resp.Choices[0].Message.Content, nil
 }
 
 // Check lists models, which validates the URL and key without generating.
 func (o *OpenAICompat) Check(ctx context.Context) error {
-	var resp struct {
-		Data []struct {
-			ID string `json:"id"`
-		} `json:"data"`
-	}
-	if err := o.do(ctx, http.MethodGet, "/models", nil, &resp); err != nil {
+	ids, err := o.listModels(ctx)
+	if err != nil {
 		return err
 	}
-	for _, m := range resp.Data {
-		// Gemini lists ids as "models/gemini-…".
-		if m.ID == o.model || strings.TrimPrefix(m.ID, "models/") == strings.TrimPrefix(o.model, "models/") {
+	want := strings.TrimPrefix(o.model, "models/")
+	for _, id := range ids {
+		if id == want {
 			return nil
 		}
 	}
-	if len(resp.Data) > 0 {
-		return fmt.Errorf("connected, but model %q is not available on this server", o.model)
+	if len(ids) > 0 {
+		return &Error{Kind: KindModel, Vendor: o.vendor, Model: o.model}
 	}
 	return nil
 }
@@ -118,22 +170,37 @@ func (o *OpenAICompat) Check(ctx context.Context) error {
 // Models lists the server's models. For Gemini, only text models that can
 // chat are kept.
 func (o *OpenAICompat) Models(ctx context.Context) ([]string, error) {
+	ids, err := o.listModels(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if o.vendor != "Gemini" {
+		return ids, nil
+	}
+	var chat []string
+	for _, id := range ids {
+		if strings.HasPrefix(id, "gemini") && !containsAny(id, "embedding", "image", "tts", "audio", "live", "veo", "imagen", "computer") {
+			chat = append(chat, id)
+		}
+	}
+	return chat, nil
+}
+
+func (o *OpenAICompat) listModels(ctx context.Context) ([]string, error) {
 	var resp struct {
 		Data []struct {
 			ID string `json:"id"`
 		} `json:"data"`
 	}
-	if err := o.do(ctx, http.MethodGet, "/models", nil, &resp); err != nil {
+	_, err := withRetry(ctx, 1, func() (string, error) {
+		return "", o.do(ctx, http.MethodGet, "/models", "", nil, &resp)
+	})
+	if err != nil {
 		return nil, err
 	}
-	gemini := strings.Contains(o.baseURL, "generativelanguage.googleapis.com")
-	var ids []string
+	ids := make([]string, 0, len(resp.Data))
 	for _, m := range resp.Data {
-		id := strings.TrimPrefix(m.ID, "models/")
-		if gemini && (!strings.HasPrefix(id, "gemini") || containsAny(id, "embedding", "image", "tts", "audio", "live", "veo", "imagen", "computer")) {
-			continue
-		}
-		ids = append(ids, id)
+		ids = append(ids, strings.TrimPrefix(m.ID, "models/")) // Gemini says "models/gemini-…"
 	}
 	sort.Strings(ids)
 	return ids, nil
@@ -148,13 +215,7 @@ func containsAny(s string, parts ...string) bool {
 	return false
 }
 
-// badRequest is a 400/404/422 answer: the server didn't accept the request
-// as sent, so a simpler request may work.
-type badRequest struct{ msg string }
-
-func (e *badRequest) Error() string { return e.msg }
-
-func (o *OpenAICompat) do(ctx context.Context, method, path string, in, out any) error {
+func (o *OpenAICompat) do(ctx context.Context, method, path, model string, in, out any) error {
 	var body io.Reader
 	if in != nil {
 		data, err := json.Marshal(in)
@@ -165,7 +226,7 @@ func (o *OpenAICompat) do(ctx context.Context, method, path string, in, out any)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, o.baseURL+path, body)
 	if err != nil {
-		return err
+		return &Error{Kind: KindOther, Vendor: o.vendor, Detail: err.Error()}
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if o.apiKey != "" {
@@ -173,51 +234,31 @@ func (o *OpenAICompat) do(ctx context.Context, method, path string, in, out any)
 	}
 	resp, err := o.http.Do(req)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			return err
+		if ctx.Err() != nil {
+			return ctx.Err()
 		}
-		if errors.Is(err, syscall.ECONNREFUSED) {
-			return fmt.Errorf("nothing is answering at %s. Is the server running?", o.baseURL)
+		e := &Error{Kind: KindNetwork, Vendor: o.vendor, Model: model, Detail: err.Error()}
+		if o.local && errors.Is(err, syscall.ECONNREFUSED) {
+			e.Kind = KindLocalOff
 		}
-		return fmt.Errorf("could not reach %s: %w", o.baseURL, err)
+		return e
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if err != nil {
-		return err
+		return &Error{Kind: KindNetwork, Vendor: o.vendor, Model: model, Detail: err.Error()}
 	}
 	if resp.StatusCode >= 300 {
-		msg := fmt.Sprintf("%s returned %d: %s", o.baseURL, resp.StatusCode, apiErrorMessage(data))
-		switch resp.StatusCode {
-		case http.StatusBadRequest, http.StatusUnprocessableEntity:
-			return &badRequest{msg}
-		case http.StatusUnauthorized, http.StatusForbidden:
-			return fmt.Errorf("the server rejected the API key (%d): %s", resp.StatusCode, apiErrorMessage(data))
-		case http.StatusTooManyRequests:
-			return fmt.Errorf("rate limited; free tiers allow only a few requests per minute. Try again shortly")
-		}
-		return errors.New(msg)
-	}
-	return json.Unmarshal(data, out)
-}
-
-func apiErrorMessage(data []byte) string {
-	var e struct {
-		Error any `json:"error"`
-	}
-	if json.Unmarshal(data, &e) == nil && e.Error != nil {
-		switch v := e.Error.(type) {
-		case string:
-			return v
-		case map[string]any:
-			if m, ok := v["message"].(string); ok {
-				return m
+		e := classifyHTTP(resp.StatusCode, string(data), o.vendor, model)
+		if ra := resp.Header.Get("Retry-After"); ra != "" && e.RetryAfter == 0 {
+			if d, err := time.ParseDuration(ra + "s"); err == nil {
+				e.RetryAfter = d
 			}
 		}
+		return e
 	}
-	s := strings.TrimSpace(string(data))
-	if len(s) > 200 {
-		s = s[:200] + "…"
+	if err := json.Unmarshal(data, out); err != nil {
+		return &Error{Kind: KindOther, Vendor: o.vendor, Model: model, Detail: "unreadable response: " + err.Error()}
 	}
-	return s
+	return nil
 }

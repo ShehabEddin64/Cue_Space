@@ -6,6 +6,7 @@ package services
 import (
 	"context"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,9 +37,35 @@ const EventMenu = "menu"
 // cuespace:// link), so the frontend can show the run report.
 const EventCueRan = "cue:ran"
 
+// EventAIStatus carries short progress messages while an AI request is
+// retried, e.g. "Gemini is busy, trying again".
+const EventAIStatus = "ai:status"
+
 func init() {
 	application.RegisterEvent[string](EventCuesChanged)
 	application.RegisterEvent[string](EventMenu)
+	application.RegisterEvent[string](EventAIStatus)
+}
+
+// aiContext forwards retry progress to the frontend and keeps App Nap from
+// slowing the request down. Call done when the request is over.
+func aiContext(ctx context.Context) (context.Context, func()) {
+	done := platform.BeginActivity("Asking the AI")
+	return ai.WithStatus(ctx, func(msg string) {
+		if app := application.Get(); app != nil {
+			app.Event.Emit(EventAIStatus, msg)
+		}
+	}), done
+}
+
+// logAIError keeps the technical detail for debugging; people only ever see
+// the plain-language message.
+func logAIError(err error) error {
+	var e *ai.Error
+	if errors.As(err, &e) && e.Detail != "" {
+		log.Printf("ai: %s (%s %s): %s", e.Kind, e.Vendor, e.Model, e.Detail)
+	}
+	return err
 }
 
 // ---------------------------------------------------------------- Cues
@@ -115,6 +142,7 @@ func (s *CueService) Start(ctx context.Context, id string) (runner.Result, error
 	if err != nil {
 		return runner.Result{}, err
 	}
+	defer platform.BeginActivity("Starting a Cue")()
 	res := s.Runner.Run(ctx, c)
 	// Recording the run is best-effort; it must not turn a good run into an error.
 	_ = s.Store.MarkRun(id, time.Now())
@@ -308,11 +336,13 @@ func (s *AIService) ListModels(ctx context.Context, cfg ai.Config, apiKey string
 	if err != nil {
 		return nil, err
 	}
-	models, err := p.Models(ctx)
+	actx, done := aiContext(ctx)
+	defer done()
+	models, err := p.Models(actx)
 	if models == nil {
 		models = []string{}
 	}
-	return models, err
+	return models, logAIError(err)
 }
 
 // TestConnection checks the saved provider, key and model.
@@ -321,7 +351,9 @@ func (s *AIService) TestConnection(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return p.Check(ctx)
+	actx, done := aiContext(ctx)
+	defer done()
+	return logAIError(p.Check(actx))
 }
 
 // Resolve asks the AI to turn phrases that couldn't be resolved locally into
@@ -331,7 +363,10 @@ func (s *AIService) Resolve(ctx context.Context, phrases []string) (ai.Resolutio
 	if err != nil {
 		return ai.Resolution{}, err
 	}
-	return ai.Resolve(ctx, p, phrases, s.System.InstalledApps())
+	actx, done := aiContext(ctx)
+	defer done()
+	res, err := ai.Resolve(actx, p, phrases, s.System.InstalledApps())
+	return res, logAIError(err)
 }
 
 // Propose asks the AI for a Cue. With base set (a saved Cue or an earlier,
@@ -345,7 +380,10 @@ func (s *AIService) Propose(ctx context.Context, description string, base *cue.C
 	if err != nil {
 		return ai.Proposal{}, err
 	}
-	return ai.Propose(ctx, p, description, base, s.System.InstalledApps())
+	actx, done := aiContext(ctx)
+	defer done()
+	prop, err := ai.Propose(actx, p, description, base, s.System.InstalledApps())
+	return prop, logAIError(err)
 }
 
 // ---------------------------------------------------------------- Prefs

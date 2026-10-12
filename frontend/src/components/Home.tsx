@@ -1,13 +1,14 @@
 import { ArrowRight, Pin, Plus, SlidersHorizontal } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from "react";
-import { examplePrompts, shortcutOrder, timeAgo, type AISettings, type Cue, type Proposal } from "../api";
+import { examplePrompts, recentlyUsed, shortcutOrder, timeAgo, type AISettings, type Cue, type Proposal } from "../api";
 import { findCue, homeCommands, parseCommand } from "../commands";
 import { usePrefs } from "../prefs";
 import { useProposal } from "../useProposal";
 import { Composer, type ComposerHandle } from "./Composer";
 import { ProposalCard } from "./ProposalCard";
+import { RecentList } from "./Recents";
 import { Toolbar } from "./Toolbar";
-import { Button } from "./ui";
+import { AIErrorNotice, Button } from "./ui";
 
 export type HomeHandle = { focusComposer: (text?: string) => void; compose: (text: string) => void };
 
@@ -26,13 +27,14 @@ export const Home = forwardRef<
     onOpen: (c: Cue) => void;
     onStart: (c: Cue) => void;
     onNewBlank: (name?: string) => void;
+    onRecents: () => void;
     onConnect: (pendingText?: string) => void;
     onSaved: (c: Cue) => void;
     onEditProposal: (p: Proposal) => void;
     onCustomize: () => void;
     onHelp: () => void;
   }
->(function Home({ ai, cues, starting, onOpen, onStart, onNewBlank, onConnect, onSaved, onEditProposal, onCustomize, onHelp }, ref) {
+>(function Home({ ai, cues, starting, onOpen, onStart, onNewBlank, onRecents, onConnect, onSaved, onEditProposal, onCustomize, onHelp }, ref) {
   const { prefs } = usePrefs();
   const composer = useRef<ComposerHandle>(null);
   const flow = useProposal(null, onSaved);
@@ -90,10 +92,8 @@ export const Home = forwardRef<
     return i >= 0 && i < 9 ? `⌘${i + 1}` : undefined;
   };
   const pinned = order.filter((c) => prefs.pinned.includes(c.id));
-  const recent = [...cues]
-    .filter((c) => !prefs.pinned.includes(c.id))
-    .sort((a, b) => (b.lastRunAt || b.updatedAt || "").localeCompare(a.lastRunAt || a.updatedAt || ""))
-    .slice(0, prefs.home.recentCount);
+  const used = recentlyUsed(cues);
+  const recent = used.slice(0, prefs.home.recentCount);
 
   const card = (c: Cue) => (
     <CueCard
@@ -120,12 +120,6 @@ export const Home = forwardRef<
             {ex.label}
           </button>
         ))}
-        <span className="px-1 text-faint" aria-hidden="true">
-          ·
-        </span>
-        <button onClick={() => onNewBlank()} className="rounded-full px-2.5 py-1.5 text-[12.5px] font-medium text-graphite hover:text-ink">
-          Build one yourself
-        </button>
       </div>
     ),
     pinned:
@@ -142,8 +136,23 @@ export const Home = forwardRef<
       ) : null,
     recent:
       recent.length > 0 ? (
-        <Section title="Jump back in">
-          <Grid>{recent.map(card)}</Grid>
+        <Section
+          title="Recently Used"
+          trailing={
+            used.length > recent.length && (
+              <button onClick={onRecents} className="text-[12px] font-medium text-red-text hover:underline">
+                See All
+              </button>
+            )
+          }
+        >
+          <RecentList cues={recent} starting={starting} shortcut={shortcut} onOpen={onOpen} onStart={onStart} />
+        </Section>
+      ) : cues.length > 0 ? (
+        <Section title="Recently Used">
+          <p className="rounded-2xl border border-dashed border-hairline px-4 py-5 text-center text-[12.5px] text-graphite">
+            Cues you start show up here, newest first.
+          </p>
         </Section>
       ) : null,
   };
@@ -152,10 +161,16 @@ export const Home = forwardRef<
     <div className="flex h-full flex-col">
       <Toolbar
         trailing={
+          <>
+          <Button variant="ghost" size="sm" onClick={() => onNewBlank()} title="Create a Cue Manually (⌥⌘N)">
+            <Plus className="size-3.5" />
+            Create Manually
+          </Button>
           <Button variant="ghost" size="sm" onClick={onCustomize} title="Customize Home">
             <SlidersHorizontal className="size-3.5" />
             Customize
           </Button>
+          </>
         }
       />
       <div className="flex-1 overflow-y-auto">
@@ -171,6 +186,7 @@ export const Home = forwardRef<
             ref={composer}
             ai={ai}
             busy={flow.busy === "compose"}
+            busyLabel={flow.status || undefined}
             commands={homeCommands}
             status={status}
             placeholder={hasProposal ? "Describe a different Cue" : "Work on Atlas: my GitHub repo, my IDE, Claude and localhost"}
@@ -179,11 +195,20 @@ export const Home = forwardRef<
             onConnect={() => onConnect()}
           />
 
-          {flow.error && (
-            <p role="alert" className="mt-3 px-2 text-[13px] text-red-text">
-              {flow.error}
-            </p>
+          {!hasProposal && !flow.busy && (
+            <div className="mt-3 flex items-center justify-center gap-2 text-[12.5px] text-graphite">
+              <span>Prefer to pick everything yourself?</span>
+              <button
+                onClick={() => onNewBlank()}
+                className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface px-3 py-1 font-medium text-ink transition-colors hover:border-red-text/30"
+              >
+                <Plus className="size-3.5" />
+                Create Manually
+              </button>
+            </div>
           )}
+
+          {flow.error && <AIErrorNotice message={flow.error} onRetry={flow.lastPrompt ? flow.retry : undefined} onSettings={() => onConnect()} />}
 
           {hasProposal ? (
             <div className="mt-5">
@@ -192,6 +217,7 @@ export const Home = forwardRef<
                 ai={ai}
                 mode="new"
                 refining={flow.busy === "refine"}
+                status={flow.status}
                 canUndo={flow.canUndo}
                 updated={flow.updated}
                 onChange={flow.setProposal}
@@ -213,14 +239,6 @@ export const Home = forwardRef<
                 .map((s) => (
                   <div key={s.id}>{sections[s.id]}</div>
                 ))}
-              {cues.length === 0 && (
-                <div className="flex justify-center">
-                  <Button variant="ghost" onClick={() => onNewBlank()}>
-                    <Plus className="size-3.5" />
-                    New Blank Cue
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -229,10 +247,13 @@ export const Home = forwardRef<
   );
 });
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, trailing, children }: { title: string; trailing?: ReactNode; children: ReactNode }) {
   return (
     <section>
-      <h2 className="mb-3 px-1 text-[13px] font-semibold">{title}</h2>
+      <div className="mb-3 flex items-baseline justify-between px-1">
+        <h2 className="text-[13px] font-semibold">{title}</h2>
+        {trailing}
+      </div>
       {children}
     </section>
   );

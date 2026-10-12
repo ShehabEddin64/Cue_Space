@@ -5,6 +5,7 @@ package cue
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -52,6 +53,10 @@ func (r Resource) DisplayName() string {
 	}
 	switch r.Type {
 	case TypeURL:
+		// "moodle.concordia.ca" reads better than a long URL.
+		if u, err := url.Parse(r.URL); err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != "" {
+			return strings.TrimPrefix(u.Hostname(), "www.")
+		}
 		return r.URL
 	case TypeApp:
 		if r.App != nil {

@@ -48,9 +48,15 @@ const (
 	DefaultAnthropicModel = "claude-opus-5-5"
 	DefaultGeminiModel    = "gemini-2.5-flash"
 
-	// GeminiBaseURL is Google's OpenAI-compatible endpoint for the Gemini API.
+	// GeminiBaseURL is Google's OpenAI-compatible endpoint, kept for people
+	// who choose "OpenAI-compatible" with Gemini; the Gemini choice uses the
+	// native API (GeminiAPI).
 	GeminiBaseURL = "https://generativelanguage.googleapis.com/v1beta/openai"
 )
+
+// geminiBackups are tried when the chosen Gemini model is busy or out of
+// free quota. Both are widely available on the free tier.
+var geminiBackups = []string{"gemini-2.5-flash", "gemini-2.5-flash-lite"}
 
 // New builds the provider described by cfg. apiKey may be empty for local
 // OpenAI-compatible servers such as Ollama.
@@ -69,11 +75,18 @@ func New(cfg Config, apiKey string) (Provider, error) {
 		if apiKey == "" {
 			return nil, errors.New("add your Gemini API key in Settings (free at aistudio.google.com)")
 		}
-		model := cfg.Model
+		model := strings.TrimPrefix(cfg.Model, "models/")
 		if model == "" {
 			model = DefaultGeminiModel
 		}
-		return NewOpenAICompat(GeminiBaseURL, apiKey, model), nil
+		p := NewGemini(apiKey, model)
+		// New and preview models are often overloaded; fall back to steady ones.
+		for _, m := range geminiBackups {
+			if m != model {
+				p.fallbacks = append(p.fallbacks, m)
+			}
+		}
+		return p, nil
 	case ProviderOpenAI:
 		if cfg.BaseURL == "" {
 			return nil, errors.New("set the base URL of your OpenAI-compatible server in Settings")

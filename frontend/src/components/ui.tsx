@@ -198,3 +198,24 @@ export function SectionTitle({ children, trailing }: { children: ReactNode; trai
     </div>
   );
 }
+
+/** A failure from the AI, in plain words, with the two things people can do. */
+export function AIErrorNotice({ message, onRetry, onSettings }: { message: string; onRetry?: () => void; onSettings?: () => void }) {
+  return (
+    <div role="alert" className="animate-pop-in mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-red-tint px-4 py-3">
+      <p className="min-w-[200px] flex-1 text-[13px] leading-relaxed text-red-on-tint">{message}</p>
+      <div className="flex gap-1.5">
+        {onRetry && (
+          <Button size="sm" variant="tinted" onClick={onRetry}>
+            Try Again
+          </Button>
+        )}
+        {onSettings && (
+          <Button size="sm" variant="ghost" onClick={onSettings}>
+            Settings
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}

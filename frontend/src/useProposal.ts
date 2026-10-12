@@ -1,5 +1,5 @@
-import type { CancellablePromise } from "@wailsio/runtime";
-import { useCallback, useRef, useState } from "react";
+import { Events, type CancellablePromise } from "@wailsio/runtime";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AIService, Cue, CueService, errorMessage, type Proposal } from "./api";
 
 /**
@@ -12,8 +12,15 @@ export function useProposal(base: Cue | null, onSaved: (c: Cue) => void) {
   const [busy, setBusy] = useState<"compose" | "refine" | null>(null);
   const [error, setError] = useState("");
   const [updated, setUpdated] = useState(false);
+  const [status, setStatus] = useState("");
   const lastPrompt = useRef("");
   const pending = useRef<CancellablePromise<Proposal> | null>(null);
+
+  // While a request runs, show retry progress ("Gemini is busy, trying again").
+  useEffect(() => {
+    if (!busy) return setStatus("");
+    return Events.On("ai:status", (e: { data: string }) => setStatus(e.data));
+  }, [busy]);
 
   const run = useCallback(async (text: string, from: Cue | null, kind: "compose" | "refine") => {
     setBusy(kind);
@@ -103,6 +110,7 @@ export function useProposal(base: Cue | null, onSaved: (c: Cue) => void) {
     proposal,
     setProposal,
     busy,
+    status,
     error,
     updated,
     canUndo: history.length > 0,

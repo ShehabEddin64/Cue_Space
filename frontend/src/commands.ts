@@ -10,7 +10,7 @@ export type CommandDef = { name: string; args?: string; description: string; use
 
 export const homeCommands: CommandDef[] = [
   { name: "create", args: "what it’s for", description: "Propose a new Cue", usesAI: "always" },
-  { name: "new", args: "name", description: "Start a blank Cue" },
+  { name: "new", args: "name", description: "Create a Cue manually" },
   { name: "start", args: "Cue name", description: "Start a Cue" },
   { name: "open", args: "Cue name", description: "Open a Cue" },
   { name: "help", description: "Show every command" },

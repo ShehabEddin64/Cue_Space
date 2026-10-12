@@ -7,7 +7,7 @@ import { Button, IconButton, Input, Label, Sheet } from "./ui";
 const sectionInfo: Record<string, { title: string; detail: string }> = {
   suggestions: { title: "Suggestions", detail: "Example ideas under the composer" },
   pinned: { title: "Pinned", detail: "The Cues you pin, with ⌘1, ⌘2…" },
-  recent: { title: "Jump back in", detail: "Cues you started recently" },
+  recent: { title: "Recently Used", detail: "The Cues you started last, newest first" },
 };
 
 /** Choose what Home shows and in which order. Changes apply as you make them. */
@@ -74,7 +74,7 @@ export function CustomizeHome({ onClose }: { onClose: () => void }) {
       </section>
 
       <section className="mt-5">
-        <Label>Cues in “Jump back in”</Label>
+        <Label>Cues in “Recently Used”</Label>
         <div role="radiogroup" className="inline-flex gap-1 rounded-full bg-fill p-1">
           {[3, 6, 9, 12].map((n) => (
             <button

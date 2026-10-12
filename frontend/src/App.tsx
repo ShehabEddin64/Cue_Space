@@ -18,6 +18,7 @@ import { CustomizeHome } from "./components/CustomizeHome";
 import { Editor, type EditorSession } from "./components/Editor";
 import { Home, type HomeHandle } from "./components/Home";
 import { Library } from "./components/Library";
+import { Recents } from "./components/Recents";
 import { RunToast, type RunReport } from "./components/RunToast";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { ShortcutsSheet } from "./components/ShortcutsSheet";
@@ -29,6 +30,7 @@ import { PrefsProvider, usePrefs } from "./prefs";
 type View =
   | { kind: "home" }
   | { kind: "library" }
+  | { kind: "recents" }
   | { kind: "cue"; id: string }
   | { kind: "edit"; session: EditorSession; back: View };
 
@@ -168,6 +170,8 @@ function Shell() {
         return goHome();
       case "library":
         return setView({ kind: "library" });
+      case "recents":
+        return setView({ kind: "recents" });
       case "customize-home":
         setView({ kind: "home" });
         return setSheet("customize");
@@ -219,7 +223,7 @@ function Shell() {
   const closeReport = useCallback(() => setReport(null), []);
 
   const selected =
-    view.kind === "home" ? "home" : view.kind === "library" ? "library" : view.kind === "cue" ? view.id : (view.session.saved?.id ?? null);
+    view.kind === "home" || view.kind === "library" || view.kind === "recents" ? view.kind : view.kind === "cue" ? view.id : (view.session.saved?.id ?? null);
 
   return (
     <LayoutContext.Provider value={{ sidebarOpen, toggleSidebar }}>
@@ -235,6 +239,7 @@ function Shell() {
             onQuery={setQuery}
             onHome={() => goHome()}
             onLibrary={() => setView({ kind: "library" })}
+            onRecents={() => setView({ kind: "recents" })}
             onSelect={(c) => setView({ kind: "cue", id: c.id })}
             onStart={start}
             onNewBlank={() => newBlank()}
@@ -269,6 +274,7 @@ function Shell() {
               onOpen={(c) => setView({ kind: "cue", id: c.id })}
               onStart={start}
               onNewBlank={newBlank}
+              onRecents={() => setView({ kind: "recents" })}
               onConnect={connect}
               onSaved={openSaved}
               onEditProposal={editProposal}
@@ -285,6 +291,17 @@ function Shell() {
               onStart={start}
               onNewBlank={() => newBlank()}
               onNew={() => goHome(true)}
+            />
+          )}
+
+          {view.kind === "recents" && (
+            <Recents
+              cues={cues}
+              starting={starting}
+              shortcut={shortcutFor}
+              onOpen={(c) => setView({ kind: "cue", id: c.id })}
+              onStart={start}
+              onLibrary={() => setView({ kind: "library" })}
             />
           )}
 

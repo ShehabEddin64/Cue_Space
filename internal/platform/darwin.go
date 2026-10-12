@@ -9,6 +9,18 @@ package platform
 #import <AppKit/AppKit.h>
 #include <stdlib.h>
 
+// Keeps App Nap from throttling user-requested work (an AI request, starting
+// a Cue) while the app is in the background.
+static void *cs_begin_activity(const char *reason) {
+	id a = [[NSProcessInfo processInfo] beginActivityWithOptions:NSActivityUserInitiatedAllowingIdleSystemSleep
+	                                                      reason:[NSString stringWithUTF8String:reason]];
+	return (__bridge_retained void *)a;
+}
+
+static void cs_end_activity(void *a) {
+	if (a) [[NSProcessInfo processInfo] endActivity:(__bridge_transfer id)a];
+}
+
 // 0 follows the system, 1 is light, 2 is dark. Setting the app's appearance
 // also switches the web view's prefers-color-scheme, menus and panels.
 static void cs_set_appearance(int mode) {
@@ -115,6 +127,16 @@ func cleanOpenError(msg string) string {
 		msg = msg[:i]
 	}
 	return msg
+}
+
+// BeginActivity tells macOS the app is doing work the person asked for, so
+// App Nap doesn't slow it down in the background. Call the returned func
+// when done.
+func BeginActivity(reason string) func() {
+	r := C.CString(reason)
+	defer C.free(unsafe.Pointer(r))
+	a := C.cs_begin_activity(r)
+	return func() { C.cs_end_activity(a) }
 }
 
 // SetAppearance switches the whole app to "light", "dark", or back to

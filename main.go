@@ -166,7 +166,7 @@ func menuBar(app *application.App, cues *store.Store, prefs *settings.File) (*ap
 
 	file := menu.AddSubmenu("File")
 	file.Add("New Cue…").SetAccelerator("CmdOrCtrl+N").OnClick(send("new-cue"))
-	file.Add("New Blank Cue").SetAccelerator("CmdOrCtrl+Alt+N").OnClick(send("new-blank-cue"))
+	file.Add("New Cue Manually").SetAccelerator("CmdOrCtrl+Alt+N").OnClick(send("new-blank-cue"))
 	file.AddSeparator()
 	file.Add("Show Cues Folder in Finder").OnClick(send("reveal-folder"))
 	file.AddSeparator()
@@ -177,6 +177,7 @@ func menuBar(app *application.App, cues *store.Store, prefs *settings.File) (*ap
 	view := menu.AddSubmenu("View")
 	view.Add("Home").SetAccelerator("CmdOrCtrl+Shift+H").OnClick(send("home"))
 	view.Add("All Cues").SetAccelerator("CmdOrCtrl+Shift+C").OnClick(send("library"))
+	view.Add("Recently Used").SetAccelerator("CmdOrCtrl+Shift+R").OnClick(send("recents"))
 	view.Add("Find Cue").SetAccelerator("CmdOrCtrl+F").OnClick(send("find"))
 	view.AddSeparator()
 	view.Add("Customize Home…").OnClick(send("customize-home"))

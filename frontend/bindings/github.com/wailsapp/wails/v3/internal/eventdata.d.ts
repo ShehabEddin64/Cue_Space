@@ -8,6 +8,7 @@ import type { Events } from "@wailsio/runtime";
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "ai:status": string;
             "cues:changed": string;
             "menu": string;
         }

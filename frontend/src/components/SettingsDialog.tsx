@@ -44,13 +44,20 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
   const [modelsError, setModelsError] = useState("");
 
   useEffect(() => {
-    AIService.GetSettings().then((s) => {
-      setLoaded(s);
-      const p = (s.config.provider || "anthropic") as Provider;
-      setProvider(p);
-      setModel(s.config.model || defaultModel[p] || "");
-      setBaseUrl(s.config.baseUrl);
-    });
+    AIService.GetSettings()
+      .then((s) => {
+        setLoaded(s);
+        const p = (s.config.provider || "anthropic") as Provider;
+        setProvider(p);
+        setModel(s.config.model || defaultModel[p] || "");
+        setBaseUrl(s.config.baseUrl);
+      })
+      .catch((e) => {
+        // Still open, with defaults, and say what went wrong.
+        setLoaded({ config: new Config({ provider: "", model: "", baseUrl: "" }), hasKey: false, ready: false } as AISettings);
+        setModel(defaultModel.anthropic);
+        setStatus({ kind: "error", text: errorMessage(e) });
+      });
   }, []);
 
   const switchProvider = (p: Provider) => {
@@ -148,6 +155,10 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
           note: provider === "gemini" ? "On Google’s free tier, Google may use your requests to improve its products." : undefined,
         });
 
+  // Settings load from a local file in a moment; wait rather than briefly
+  // showing defaults (it used to flash "Anthropic" before the real choice).
+  if (!loaded) return null;
+
   return (
     <Sheet
       title="Settings"
@@ -244,7 +255,17 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
 
       {provider && (
         <section className="mt-5">
-          <Label hint={defaultModel[provider] ? `Default: ${defaultModel[provider]}` : "e.g. gpt-5, llama3.2, qwen3"}>Model</Label>
+          <Label
+            hint={
+              provider === "gemini"
+                ? "If it’s busy, Cue Space switches to Gemini 2.5 Flash automatically"
+                : defaultModel[provider]
+                  ? `Default: ${defaultModel[provider]}`
+                  : "e.g. gpt-5, llama3.2, qwen3"
+            }
+          >
+            Model
+          </Label>
           <div className="flex gap-1.5">
             {models.length > 0 ? (
               <select

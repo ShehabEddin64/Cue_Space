@@ -8,7 +8,7 @@ import { Composer, type ComposerHandle } from "./Composer";
 import { DesktopStrip } from "./Layout";
 import { ProposalCard } from "./ProposalCard";
 import { Toolbar } from "./Toolbar";
-import { Button, InsetList, SectionTitle, TypeIcon } from "./ui";
+import { AIErrorNotice, Button, InsetList, SectionTitle, TypeIcon } from "./ui";
 
 /** One Cue: start it, read what it opens, or change it with commands, AI, or by hand. */
 export function CueDetail({
@@ -142,6 +142,7 @@ export function CueDetail({
                 ai={ai}
                 mode="edit"
                 refining={flow.busy === "refine"}
+                status={flow.status}
                 canUndo={flow.canUndo}
                 updated={flow.updated}
                 onChange={flow.setProposal}
@@ -161,7 +162,7 @@ export function CueDetail({
                 compact
                 ai={ai}
                 busy={flow.busy === "compose" || busy}
-                busyLabel={busy ? "Updating this Cue" : undefined}
+                busyLabel={busy ? "Updating this Cue" : flow.status || undefined}
                 commands={cueCommands}
                 status={status}
                 placeholder="Change this Cue: /add figma, /off localhost, or describe it"
@@ -170,11 +171,7 @@ export function CueDetail({
                 onConnect={onConnect}
               />
             )}
-            {flow.error && (
-              <p role="alert" className="mt-2.5 px-2 text-[13px] text-red-text">
-                {flow.error}
-              </p>
-            )}
+            {flow.error && <AIErrorNotice message={flow.error} onRetry={flow.lastPrompt ? flow.retry : undefined} onSettings={onConnect} />}
             {undo && !flow.proposal && (
               <div className="animate-pop-in mt-2.5 flex items-center gap-2 px-2 text-[12.5px] text-graphite" role="status">
                 <span className="min-w-0 flex-1 truncate">{undo.message}</span>

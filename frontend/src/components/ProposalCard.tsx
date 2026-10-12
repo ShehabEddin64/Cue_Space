@@ -26,6 +26,7 @@ export function ProposalCard({
   ai,
   mode,
   refining,
+  status,
   canUndo,
   updated,
   onChange,
@@ -40,6 +41,8 @@ export function ProposalCard({
   ai: AISettings | null;
   mode: "new" | "edit";
   refining: boolean;
+  /** Retry progress while refining, e.g. "Gemini is busy, trying again". */
+  status?: string;
   canUndo: boolean;
   updated: boolean;
   onChange: (p: Proposal) => void;
@@ -102,7 +105,15 @@ export function ProposalCard({
           {mode === "new" ? "Proposed Cue" : "Proposed changes"}
           {updated && <span className="animate-pop-in rounded-full bg-red-tint px-2 py-px text-[11px] text-red-on-tint">Updated</span>}
         </div>
-        {ai?.disclosure.model && <span className="truncate text-[11px] text-faint">Made with {ai.disclosure.model}</span>}
+        {(proposal.model || ai?.disclosure.model) && (
+          <span
+            className="truncate text-[11px] text-faint"
+            title={proposal.model ? `${ai?.disclosure.model ?? "Your model"} was busy, so ${proposal.model} answered instead.` : undefined}
+          >
+            Made with {proposal.model || ai?.disclosure.model}
+            {proposal.model && " (backup)"}
+          </span>
+        )}
       </header>
 
       {/* Identity, editable in place. */}
@@ -171,7 +182,9 @@ export function ProposalCard({
         )}
       </div>
 
-      {refineNote && <p className="-mt-2 mb-3 px-6 text-[12px] text-graphite">{refineNote}</p>}
+      {(refining && status ? status + "…" : refineNote) && (
+        <p className="-mt-2 mb-3 px-6 text-[12px] text-graphite">{refining && status ? status + "…" : refineNote}</p>
+      )}
 
       <footer className="flex flex-wrap items-center gap-2 border-t border-hairline bg-canvas/50 px-5 py-3.5">
         <Button variant="primary" onClick={onSave} disabled={blocked || refining} title={blocked ? problems.join("\n") : undefined}>

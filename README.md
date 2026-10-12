@@ -85,7 +85,7 @@ Cue Space follows Apple’s Human Interface Guidelines for structure and its own
 - **The mark.** A ring (the intention) and a dot (the cue that closes it). While the AI works, the dot travels the ring.
 - **AI first, never required.** Home leads with the composer. Proposals are reviewed in place and can be fixed, refined, retried, undone or discarded. The app always says which model is used and where requests go. Building a Cue by hand is always one click away.
 - **Mac conventions.** A sidebar you can hide (⌃⌘S), every command in the menu bar, Settings at ⌘,, and an Appearance setting (System, Light or Dark).
-- **Customizable Home.** Change the greeting, show, hide and reorder the sections (Suggestions, Pinned, Jump back in) from View › Customize Home.
+- **Customizable Home.** Change the greeting, show, hide and reorder the sections (Suggestions, Pinned, Recently Used) from View › Customize Home.
 - **First run.** A five-step welcome tour, replayable from Help › Welcome Tour.
 - **App icon.** A full-bleed Cue Red square with the mark and a soft shadow, so macOS 26 masks it into the standard shape instead of placing it on a plate. `build/appicon.icon` is the Icon Composer source; compiling it into `Assets.car` needs full Xcode, so builds use `build/darwin/icons.icns`, generated from `build/appicon.png`.
 
@@ -115,6 +115,8 @@ Run the Go tests:
 go test ./internal/...
 ```
 
+Development builds are ad-hoc signed with a designated requirement on the bundle id (`build/darwin/designated.req`), so macOS privacy permissions such as Accessibility survive rebuilds. If you granted Accessibility to a build from before this change, remove Cue Space from System Settings › Privacy & Security › Accessibility and add it again once.
+
 To keep your real Cues out of the way while developing, point the app at another folder with `CUESPACE_DIR=/tmp/cues`.
 
 ### Layout
@@ -125,7 +127,7 @@ internal/cue         the Cue model, validation (JSON Schema + rules)
 internal/store       one .cue.json per Cue, atomic writes, folder watcher
 internal/runner      starts a Cue: opens enabled resources in order, reports each step
 internal/platform    the only OS-specific code: `open`, installed-app scan, Trash (macOS)
-internal/ai          providers (Anthropic, Gemini, OpenAI-compatible) and the Cue proposal prompt
+internal/ai          providers (Anthropic, Gemini native API, OpenAI-compatible), retries and backup models, the Cue proposal prompt
 internal/settings    settings.json (provider, model, base URL)
 internal/secrets     Keychain access
 services/            the thin layer bound to the frontend (TypeScript bindings are generated)

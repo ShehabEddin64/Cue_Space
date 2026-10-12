@@ -119,3 +119,16 @@ func TestRoundTripOmitsEmptyFields(t *testing.T) {
 		t.Errorf("re-parse failed: %v", err)
 	}
 }
+
+func TestURLDisplayName(t *testing.T) {
+	cases := map[string]string{
+		"https://www.moodle.concordia.ca/course/view.php?id=1": "moodle.concordia.ca",
+		"http://localhost:3000":                                "localhost",
+		"obsidian://open?vault=x":                              "obsidian://open?vault=x",
+	}
+	for u, want := range cases {
+		if got := (Resource{Type: TypeURL, URL: u}).DisplayName(); got != want {
+			t.Errorf("DisplayName(%q) = %q, want %q", u, got, want)
+		}
+	}
+}

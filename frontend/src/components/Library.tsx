@@ -61,9 +61,9 @@ export function Library({
         title="Cues"
         trailing={
           <>
-            <Button variant="ghost" size="sm" onClick={onNewBlank}>
+            <Button variant="ghost" size="sm" onClick={onNewBlank} title="Create a Cue Manually (⌥⌘N)">
               <Plus className="size-3.5" />
-              Blank Cue
+              Create Manually
             </Button>
             <Button variant="primary" size="sm" onClick={onNew} title="New Cue (⌘N)">
               New Cue…
@@ -110,7 +110,7 @@ export function Library({
                 <Button variant="primary" onClick={onNew}>
                   New Cue…
                 </Button>
-                <Button onClick={onNewBlank}>Blank Cue</Button>
+                <Button onClick={onNewBlank}>Create Manually</Button>
               </div>
             </div>
           ) : shown.length === 0 ? (

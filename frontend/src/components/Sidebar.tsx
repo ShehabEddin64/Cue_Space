@@ -1,6 +1,6 @@
-import { House, LayoutGrid, PanelLeft, Play, Plus, Search, Settings2 } from "lucide-react";
+import { Clock, House, LayoutGrid, PanelLeft, Play, Plus, Search, Settings2 } from "lucide-react";
 import { forwardRef, useImperativeHandle, useRef, type ReactNode } from "react";
-import { displayName, shortcutOrder, type AISettings, type Cue } from "../api";
+import { displayName, recentlyUsed, shortcutOrder, type AISettings, type Cue } from "../api";
 import { usePrefs } from "../prefs";
 import { CueMark, IconButton } from "./ui";
 
@@ -14,20 +14,21 @@ export const Sidebar = forwardRef<
   SidebarHandle,
   {
     cues: Cue[];
-    selected: "home" | "library" | string | null;
+    selected: "home" | "library" | "recents" | string | null;
     query: string;
     ai: AISettings | null;
     starting: string | null;
     onQuery: (q: string) => void;
     onHome: () => void;
     onLibrary: () => void;
+    onRecents: () => void;
     onSelect: (c: Cue) => void;
     onStart: (c: Cue) => void;
     onNewBlank: () => void;
     onSettings: () => void;
     onHide: () => void;
   }
->(function Sidebar({ cues, selected, query, ai, starting, onQuery, onHome, onLibrary, onSelect, onStart, onNewBlank, onSettings, onHide }, ref) {
+>(function Sidebar({ cues, selected, query, ai, starting, onQuery, onHome, onLibrary, onRecents, onSelect, onStart, onNewBlank, onSettings, onHide }, ref) {
   const { prefs } = usePrefs();
   const search = useRef<HTMLInputElement>(null);
   useImperativeHandle(ref, () => ({ focusSearch: () => search.current?.focus() }));
@@ -103,6 +104,11 @@ export const Sidebar = forwardRef<
           <span className="flex-1 truncate">Cues</span>
           <span className="text-[11px] text-faint">{cues.length}</span>
         </Row>
+        <Row active={selected === "recents"} onClick={onRecents}>
+          <Clock className="size-4 text-red-text" strokeWidth={1.9} />
+          <span className="flex-1 truncate">Recently Used</span>
+          {recentlyUsed(cues).length > 0 && <span className="text-[11px] text-faint">{recentlyUsed(cues).length}</span>}
+        </Row>
 
         {pinnedShown.length > 0 && (
           <>
@@ -113,7 +119,7 @@ export const Sidebar = forwardRef<
 
         <div className="mb-1 mt-5 flex items-center justify-between pl-2.5 pr-1">
           <span className="text-[11px] font-semibold text-faint">{pinnedShown.length > 0 ? "Other Cues" : "Your Cues"}</span>
-          <IconButton label="New Blank Cue (⌥⌘N)" onClick={onNewBlank} className="size-6">
+          <IconButton label="Create a Cue Manually (⌥⌘N)" onClick={onNewBlank} className="size-6">
             <Plus className="size-3.5" />
           </IconButton>
         </div>

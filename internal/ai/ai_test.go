@@ -97,7 +97,7 @@ func TestProposeEditKeepsIdentity(t *testing.T) {
 	if prop.Cue.ID != "keep-me" {
 		t.Errorf("id = %q", prop.Cue.ID)
 	}
-	if !strings.Contains(p.got.User, `1. url "https://a.b" https://a.b`) {
+	if !strings.Contains(p.got.User, `1. url "a.b" https://a.b`) {
 		t.Errorf("existing cue not sent compactly: %q", p.got.User)
 	}
 	if got := prop.Cue.Resources[1].App; got.BundleID != "com.apple.calculator" || got.Name != "Calculator" {
@@ -224,7 +224,7 @@ func TestOpenAICompatConnectionRefused(t *testing.T) {
 	srv.Close() // nothing listens here any more
 	p := NewOpenAICompat(url+"/v1", "", "m")
 	err := p.Check(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "Is the server running?") {
+	if err == nil || !strings.Contains(err.Error(), "isn’t running. Open it, then try again.") {
 		t.Errorf("got %v", err)
 	}
 }

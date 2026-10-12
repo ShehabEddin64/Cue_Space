@@ -420,7 +420,7 @@ func (a *Arranger) Place(ctx context.Context, rsc cue.Resource, path string, slo
 	}
 	space := C.cs_active_space()
 
-	openNote, err := a.open(ctx, rsc, path, bundle)
+	openNote, err := a.open(ctx, rsc, path, bundle, wasRunning)
 	if err != nil {
 		return "", err
 	}
@@ -509,9 +509,14 @@ func near(a, b float64) bool {
 
 // open opens rsc so that it gets a window of its own. Links normally open
 // as tabs in the browser's front window, so ask the browser for a new window.
-func (a *Arranger) open(ctx context.Context, rsc cue.Resource, path, browser string) (string, error) {
+func (a *Arranger) open(ctx context.Context, rsc cue.Resource, path, browser string, browserRunning bool) (string, error) {
 	switch rsc.Type {
 	case cue.TypeURL:
+		if !browserRunning {
+			// A browser launched with a link opens it in its first window;
+			// asking it for a new window too would leave an extra one.
+			return "", a.Launcher.OpenURL(ctx, rsc.URL)
+		}
 		return a.openURLInNewWindow(ctx, rsc.URL, browser)
 	case cue.TypeApp:
 		return "", a.Launcher.OpenApp(ctx, *rsc.App)

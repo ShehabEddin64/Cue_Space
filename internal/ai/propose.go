@@ -86,6 +86,8 @@ type Proposal struct {
 	// Questions maps a resource id to what the user still needs to fill in.
 	Questions map[string]string `json:"questions"`
 	Notes     string            `json:"notes"`
+	// Model names the model that answered when a backup stepped in.
+	Model string `json:"model,omitempty"`
 }
 
 // Propose asks the provider for a Cue matching description. When existing is
@@ -106,6 +108,11 @@ func Propose(ctx context.Context, p Provider, description string, existing *cue.
 		return Proposal{}, err
 	}
 	prop := d.toProposal(apps)
+	if u, ok := p.(interface{ UsedModel() string }); ok {
+		if used := u.UsedModel(); used != "" && used != configuredModel(p) {
+			prop.Model = prettyModel(used)
+		}
+	}
 	if existing != nil {
 		prop.Cue.ID = existing.ID
 		prop.Cue.CreatedAt = existing.CreatedAt
@@ -281,4 +288,11 @@ func resolveApp(apps []platform.App, bundleID, name string) (*cue.AppRef, bool) 
 		name = bundleID
 	}
 	return &cue.AppRef{BundleID: bundleID, Name: name}, len(apps) == 0
+}
+
+func configuredModel(p Provider) string {
+	if c, ok := p.(interface{ ConfiguredModel() string }); ok {
+		return c.ConfiguredModel()
+	}
+	return ""
 }

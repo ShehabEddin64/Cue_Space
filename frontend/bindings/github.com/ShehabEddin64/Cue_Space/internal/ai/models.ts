@@ -105,6 +105,11 @@ export class Proposal {
     "questions": { [_ in string]?: string };
     "notes": string;
 
+    /**
+     * Model names the model that answered when a backup stepped in.
+     */
+    "model"?: string;
+
     /** Creates a new Proposal instance. */
     constructor($$source: Partial<Proposal> = {}) {
         if (!("cue" in $$source)) {

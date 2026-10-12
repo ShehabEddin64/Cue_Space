@@ -3,7 +3,6 @@ package ai
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -18,7 +17,8 @@ type Anthropic struct {
 }
 
 func NewAnthropic(apiKey, model, baseURL string) *Anthropic {
-	opts := []option.RequestOption{option.WithAPIKey(apiKey)}
+	// The SDK retries overloads and rate limits itself; allow a few more.
+	opts := []option.RequestOption{option.WithAPIKey(apiKey), option.WithMaxRetries(4)}
 	if baseURL != "" {
 		opts = append(opts, option.WithBaseURL(baseURL))
 	}
@@ -50,9 +50,9 @@ func (a *Anthropic) Complete(ctx context.Context, req Request) (string, error) {
 	}
 	switch resp.StopReason {
 	case anthropic.BetaStopReasonRefusal:
-		return "", errors.New("the model declined this request")
+		return "", &Error{Kind: KindRefused, Vendor: "Claude", Model: a.model}
 	case anthropic.BetaStopReasonMaxTokens:
-		return "", errors.New("the model's answer was cut off; try a shorter description")
+		return "", errors.New("The answer was cut off. Try a shorter description.")
 	}
 	var out strings.Builder
 	for _, block := range resp.Content {
@@ -67,7 +67,12 @@ func (a *Anthropic) Complete(ctx context.Context, req Request) (string, error) {
 // generating any tokens.
 func (a *Anthropic) Check(ctx context.Context) error {
 	if _, err := a.client.Models.Get(ctx, a.model, anthropic.ModelGetParams{}); err != nil {
-		return describeAnthropicError(err)
+		e := describeAnthropicError(err)
+		var ae *Error
+		if errors.As(e, &ae) && ae.Kind == KindModel {
+			ae.Model = a.model
+		}
+		return e
 	}
 	return nil
 }
@@ -85,27 +90,16 @@ func (a *Anthropic) Models(ctx context.Context) ([]string, error) {
 }
 
 func describeAnthropicError(err error) error {
-	var apiErr *anthropic.Error
-	if errors.As(err, &apiErr) {
-		switch apiErr.StatusCode {
-		case 401:
-			return errors.New("Anthropic rejected the API key")
-		case 403:
-			return errors.New("this API key cannot use that model")
-		case 404:
-			return errors.New("model not found; check the model name in Settings")
-		case 429:
-			return errors.New("rate limited by Anthropic; try again in a moment")
-		case 529:
-			return errors.New("Anthropic is overloaded; try again in a moment")
-		}
-		if apiErr.StatusCode >= 500 {
-			return fmt.Errorf("Anthropic server error (%d); try again", apiErr.StatusCode)
-		}
-		return fmt.Errorf("Anthropic request failed (%d)", apiErr.StatusCode)
-	}
 	if errors.Is(err, context.Canceled) {
 		return err
 	}
-	return fmt.Errorf("could not reach Anthropic: %w", err)
+	var apiErr *anthropic.Error
+	if errors.As(err, &apiErr) {
+		e := classifyHTTP(apiErr.StatusCode, apiErr.Error(), "Claude", "")
+		if apiErr.StatusCode == 529 {
+			e.Kind = KindBusy // "overloaded"
+		}
+		return e
+	}
+	return &Error{Kind: KindNetwork, Vendor: "Claude", Detail: err.Error()}
 }
