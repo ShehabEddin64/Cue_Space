@@ -27,8 +27,13 @@ import (
 // outside the app.
 const EventCuesChanged = "cues:changed"
 
+// EventMenu carries the action of a menu bar command to the frontend, e.g.
+// "new-cue" or "start-cue".
+const EventMenu = "menu"
+
 func init() {
 	application.RegisterEvent[string](EventCuesChanged)
+	application.RegisterEvent[string](EventMenu)
 }
 
 // ---------------------------------------------------------------- Cues
@@ -187,14 +192,17 @@ func collapseHome(p string) string {
 type AIService struct {
 	Settings *settings.File
 	Secrets  secrets.Store
-	Cues     *store.Store
 	System   *SystemService
 }
 
-// AISettings is what the Settings screen shows. The key itself never leaves Go.
+// AISettings is what the UI shows about the AI. The key itself never leaves Go.
 type AISettings struct {
 	Config ai.Config `json:"config"`
 	HasKey bool      `json:"hasKey"`
+	// Ready is true when Describe can be used.
+	Ready bool `json:"ready"`
+	// Disclosure names the model and where requests go.
+	Disclosure ai.Disclosure `json:"disclosure"`
 }
 
 func (s *AIService) GetSettings() (AISettings, error) {
@@ -203,7 +211,8 @@ func (s *AIService) GetSettings() (AISettings, error) {
 		return AISettings{}, err
 	}
 	key, _ := s.Secrets.Get(secrets.APIKeyName(st.AI.Provider))
-	return AISettings{Config: st.AI, HasKey: key != ""}, nil
+	_, err = ai.New(st.AI, key)
+	return AISettings{Config: st.AI, HasKey: key != "", Ready: err == nil, Disclosure: ai.Describe(st.AI)}, nil
 }
 
 // SaveSettings stores the provider config. A non-empty apiKey replaces the
@@ -254,9 +263,10 @@ func (s *AIService) TestConnection(ctx context.Context) error {
 	return p.Check(ctx)
 }
 
-// Propose asks the AI for a Cue. With editID set, it edits that Cue. The
+// Propose asks the AI for a Cue. With base set (a saved Cue or an earlier,
+// unsaved proposal), the AI changes that Cue instead of starting over. The
 // result is only a proposal: nothing is saved until the user saves it.
-func (s *AIService) Propose(ctx context.Context, description, editID string) (ai.Proposal, error) {
+func (s *AIService) Propose(ctx context.Context, description string, base *cue.Cue) (ai.Proposal, error) {
 	if strings.TrimSpace(description) == "" {
 		return ai.Proposal{}, errors.New("describe what the Cue is for")
 	}
@@ -264,13 +274,5 @@ func (s *AIService) Propose(ctx context.Context, description, editID string) (ai
 	if err != nil {
 		return ai.Proposal{}, err
 	}
-	var existing *cue.Cue
-	if editID != "" {
-		c, err := s.Cues.Get(editID)
-		if err != nil {
-			return ai.Proposal{}, err
-		}
-		existing = &c
-	}
-	return ai.Propose(ctx, p, description, existing, s.System.InstalledApps())
+	return ai.Propose(ctx, p, description, base, s.System.InstalledApps())
 }

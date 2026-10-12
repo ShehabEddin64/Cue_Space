@@ -9,6 +9,7 @@ declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "cues:changed": string;
+            "menu": string;
         }
     }
 }

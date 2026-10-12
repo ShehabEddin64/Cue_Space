@@ -6,6 +6,8 @@ package ai
 import (
 	"context"
 	"errors"
+	"net/url"
+	"strings"
 )
 
 // Request is one structured completion: the model must answer with JSON that
@@ -68,4 +70,73 @@ func New(cfg Config, apiKey string) (Provider, error) {
 		return nil, ErrNotConfigured
 	}
 	return nil, errors.New("unknown AI provider " + cfg.Provider)
+}
+
+// Disclosure says in plain words which model handles requests and where, so
+// the UI can be honest about what leaves the Mac.
+type Disclosure struct {
+	// Model is a display name, e.g. "Claude Opus 5.5" or "llama3.2".
+	Model string `json:"model"`
+	// Vendor is who runs it, e.g. "Anthropic", "Ollama", "OpenRouter".
+	Vendor string `json:"vendor"`
+	// Local is true when requests never leave this Mac.
+	Local bool `json:"local"`
+}
+
+func Describe(cfg Config) Disclosure {
+	switch cfg.Provider {
+	case ProviderAnthropic:
+		model := cfg.Model
+		if model == "" {
+			model = DefaultAnthropicModel
+		}
+		return Disclosure{Model: prettyModel(model), Vendor: "Anthropic"}
+	case ProviderOpenAI:
+		d := Disclosure{Model: cfg.Model}
+		u, err := url.Parse(cfg.BaseURL)
+		if err != nil || u.Host == "" {
+			d.Vendor = cfg.BaseURL
+			return d
+		}
+		host := u.Hostname()
+		d.Local = host == "localhost" || host == "127.0.0.1" || host == "::1"
+		switch {
+		case d.Local && u.Port() == "11434":
+			d.Vendor = "Ollama"
+		case d.Local && u.Port() == "1234":
+			d.Vendor = "LM Studio"
+		case strings.HasSuffix(host, "openai.com"):
+			d.Vendor = "OpenAI"
+		case strings.HasSuffix(host, "openrouter.ai"):
+			d.Vendor = "OpenRouter"
+		default:
+			d.Vendor = host
+		}
+		return d
+	}
+	return Disclosure{}
+}
+
+// prettyModel turns "claude-opus-5-5" into "Claude Opus 5.5".
+func prettyModel(id string) string {
+	parts := strings.Split(id, "-")
+	var words, version []string
+	for _, p := range parts {
+		if p == "" {
+			continue
+		}
+		if p[0] >= '0' && p[0] <= '9' {
+			version = append(version, p)
+			continue
+		}
+		if len(version) > 0 { // a word after the version, e.g. a suffix
+			words = append(words, strings.Join(version, "."))
+			version = nil
+		}
+		words = append(words, strings.ToUpper(p[:1])+p[1:])
+	}
+	if len(version) > 0 {
+		words = append(words, strings.Join(version, "."))
+	}
+	return strings.Join(words, " ")
 }

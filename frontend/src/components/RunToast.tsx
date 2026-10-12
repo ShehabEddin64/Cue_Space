@@ -1,9 +1,11 @@
-import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { AlertCircle, X } from "lucide-react";
 import { useEffect } from "react";
 import { Status, type Result } from "../api";
+import { CueMark } from "./ui";
 
 export type RunReport = { cueName: string; result: Result } | { cueName: string; error: string };
 
+/** Feedback for Start Cue, in the interface rather than an alert. */
 export function RunToast({ report, onClose, onFix }: { report: RunReport; onClose: () => void; onFix: () => void }) {
   const failed = "result" in report ? report.result.steps.filter((s) => s.status === Status.StatusFailed) : [];
   const opened = "result" in report ? report.result.steps.filter((s) => s.status === Status.StatusOK).length : 0;
@@ -12,7 +14,7 @@ export function RunToast({ report, onClose, onFix }: { report: RunReport; onClos
   // Successful runs dismiss themselves; problems stay until read.
   useEffect(() => {
     if (!ok) return;
-    const t = setTimeout(onClose, 3500);
+    const t = setTimeout(onClose, 3200);
     return () => clearTimeout(t);
   }, [ok, onClose]);
 
@@ -20,43 +22,43 @@ export function RunToast({ report, onClose, onFix }: { report: RunReport; onClos
     <div
       role="status"
       aria-live="polite"
-      className="no-drag animate-pop-in fixed bottom-5 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 rounded-xl border border-border bg-surface p-3.5 shadow-pop"
+      className="animate-pop-in fixed bottom-6 left-1/2 z-50 w-[min(440px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl border border-hairline bg-surface/95 p-4 shadow-pop backdrop-blur-xl"
     >
-      <div className="flex items-start gap-2.5">
-        {ok ? <CheckCircle2 className="mt-px size-4 shrink-0 text-ok" /> : <AlertCircle className="mt-px size-4 shrink-0 text-danger" />}
+      <div className="flex items-start gap-3">
+        {ok ? <CueMark size={18} className="mt-px" /> : <AlertCircle className="mt-px size-[18px] shrink-0 text-red-text" />}
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium">
+          <p className="text-[13px] font-semibold">
             {"error" in report
               ? `Couldn’t start ${report.cueName}`
               : ok
-                ? `${report.cueName} started`
+                ? `${report.cueName} is ready`
                 : `${report.cueName} started with ${failed.length} problem${failed.length === 1 ? "" : "s"}`}
           </p>
           {"error" in report ? (
-            <p className="mt-0.5 text-xs text-muted">{report.error}</p>
+            <p className="mt-0.5 text-[12px] text-graphite">{report.error}</p>
           ) : (
             <>
-              <p className="mt-0.5 text-xs text-muted">
+              <p className="mt-0.5 text-[12px] text-graphite">
                 Opened {opened} item{opened === 1 ? "" : "s"}
               </p>
               {failed.length > 0 && (
                 <ul className="mt-2 space-y-1">
                   {failed.map((s) => (
-                    <li key={s.resourceId} className="text-xs">
-                      <span className="font-medium">{s.label}</span> <span className="text-muted">— {s.error}</span>
+                    <li key={s.resourceId} className="text-[12px]">
+                      <span className="font-medium">{s.label}</span> <span className="text-graphite">— {s.error}</span>
                     </li>
                   ))}
                 </ul>
               )}
               {failed.length > 0 && (
-                <button onClick={onFix} className="mt-2 text-xs font-medium text-accent hover:underline">
-                  Fix in editor
+                <button onClick={onFix} className="mt-2.5 text-[12px] font-medium text-red-text hover:underline">
+                  Fix in Editor
                 </button>
               )}
             </>
           )}
         </div>
-        <button aria-label="Dismiss" onClick={onClose} className="rounded p-0.5 text-faint hover:text-text">
+        <button aria-label="Dismiss" onClick={onClose} className="rounded-full p-0.5 text-faint hover:bg-fill hover:text-ink">
           <X className="size-3.5" />
         </button>
       </div>

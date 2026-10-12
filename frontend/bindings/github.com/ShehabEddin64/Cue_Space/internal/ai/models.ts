@@ -45,6 +45,50 @@ export class Config {
 }
 
 /**
+ * Disclosure says in plain words which model handles requests and where, so
+ * the UI can be honest about what leaves the Mac.
+ */
+export class Disclosure {
+    /**
+     * Model is a display name, e.g. "Claude Opus 5.5" or "llama3.2".
+     */
+    "model": string;
+
+    /**
+     * Vendor is who runs it, e.g. "Anthropic", "Ollama", "OpenRouter".
+     */
+    "vendor": string;
+
+    /**
+     * Local is true when requests never leave this Mac.
+     */
+    "local": boolean;
+
+    /** Creates a new Disclosure instance. */
+    constructor($$source: Partial<Disclosure> = {}) {
+        if (!("model" in $$source)) {
+            this["model"] = "";
+        }
+        if (!("vendor" in $$source)) {
+            this["vendor"] = "";
+        }
+        if (!("local" in $$source)) {
+            this["local"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Disclosure instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Disclosure {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Disclosure($$parsedSource as Partial<Disclosure>);
+    }
+}
+
+/**
  * Proposal is an AI-suggested Cue awaiting the user's review.
  */
 export class Proposal {

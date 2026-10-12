@@ -57,6 +57,16 @@ Resource types are `url` (any scheme, including deep links such as `obsidian://`
 
 API keys are stored in the macOS Keychain, never in these files.
 
+## Design
+
+Cue Space follows Apple’s Human Interface Guidelines for structure and its own identity for character. A design reviewer skill grounded in the guidelines lives in `.claude/skills/apple-design`.
+
+- **Identity.** Cue Red `#D93025` for the mark and primary actions only, Ink `#18181A`, Canvas `#F6F5F3`, Night `#111113` in dark mode. Geist for the interface, Geist Mono for paths and URLs. Fonts are bundled, so nothing loads from the network. Tokens are in [`frontend/src/index.css`](frontend/src/index.css), with contrast ratios noted.
+- **The mark.** A ring (the intention) and a dot (the cue that closes it). While the AI works, the dot travels the ring.
+- **AI first, never required.** Home leads with the composer. Proposals are reviewed in place and can be fixed, refined, retried, undone or discarded. The app always says which model is used and where requests go. Building a Cue by hand is always one click away.
+- **Mac conventions.** A sidebar you can hide (⌃⌘S), every command in the menu bar, Settings at ⌘,, and light and dark appearance that follow the system.
+- **App icon.** `build/appicon.icon` is the Icon Composer source for macOS 26. Compiling it into `Assets.car` needs full Xcode. Without Xcode, the build uses `build/darwin/icons.icns`, generated from `build/appicon.png`.
+
 ## Development
 
 Requirements: macOS, Go 1.25+, Node 20+, and the Wails v3 CLI:

@@ -223,3 +223,23 @@ func TestOpenAICompatConnectionRefused(t *testing.T) {
 		t.Errorf("got %v", err)
 	}
 }
+
+func TestDescribe(t *testing.T) {
+	cases := []struct {
+		cfg  Config
+		want Disclosure
+	}{
+		{Config{Provider: ProviderAnthropic}, Disclosure{Model: "Claude Opus 5.5", Vendor: "Anthropic"}},
+		{Config{Provider: ProviderAnthropic, Model: "claude-haiku-5-5"}, Disclosure{Model: "Claude Haiku 5.5", Vendor: "Anthropic"}},
+		{Config{Provider: ProviderOpenAI, Model: "llama3.2", BaseURL: "http://localhost:11434/v1"}, Disclosure{Model: "llama3.2", Vendor: "Ollama", Local: true}},
+		{Config{Provider: ProviderOpenAI, Model: "qwen3", BaseURL: "http://127.0.0.1:1234/v1"}, Disclosure{Model: "qwen3", Vendor: "LM Studio", Local: true}},
+		{Config{Provider: ProviderOpenAI, Model: "gpt-5", BaseURL: "https://api.openai.com/v1"}, Disclosure{Model: "gpt-5", Vendor: "OpenAI"}},
+		{Config{Provider: ProviderOpenAI, Model: "x", BaseURL: "https://llm.example.com/v1"}, Disclosure{Model: "x", Vendor: "llm.example.com"}},
+		{Config{}, Disclosure{}},
+	}
+	for _, c := range cases {
+		if got := Describe(c.cfg); got != c.want {
+			t.Errorf("Describe(%+v) = %+v, want %+v", c.cfg, got, c.want)
+		}
+	}
+}

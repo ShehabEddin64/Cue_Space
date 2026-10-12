@@ -1,10 +1,10 @@
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { ArrowLeft, ArrowRight, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AIService, Cue, CueService, errorMessage, newResource, Resource, ResourceType, SystemService } from "../api";
+import { Cue, CueService, errorMessage, newResource, Resource, ResourceType, SystemService } from "../api";
 import { ResourceRow } from "./ResourceRow";
-import { Button, Input, Kbd, TypeIcon, typeNames } from "./ui";
+import { Toolbar } from "./Toolbar";
+import { Button, CueMark, Kbd, SectionTitle, TypeIcon, typeNames } from "./ui";
 
 export type EditorSession = {
   cue: Cue;
@@ -13,6 +13,8 @@ export type EditorSession = {
   questions?: Record<string, string | undefined>;
   notes?: string;
   fromAI?: boolean;
+  /** Open with the Move to Trash confirmation showing (from the menu bar). */
+  askDelete?: boolean;
 };
 
 const addable = [ResourceType.TypeURL, ResourceType.TypeApp, ResourceType.TypeFile, ResourceType.TypeFolder];
@@ -27,33 +29,26 @@ function looksLikeURL(text: string) {
   return /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(text.trim());
 }
 
+/** Building a Cue by hand: the path that never needs AI. */
 export function Editor({
   session,
-  aiReady,
   onClose,
   onSaved,
   onDeleted,
-  onStart,
 }: {
   session: EditorSession;
-  aiReady: boolean;
   onClose: () => void;
   onSaved: (c: Cue) => void;
   onDeleted: () => void;
-  onStart: (c: Cue) => void;
 }) {
   const [draft, setDraft] = useState<Cue>(session.cue);
-  const [saved, setSaved] = useState<Cue | null>(session.saved);
+  const saved = session.saved;
   const [questions, setQuestions] = useState(session.questions ?? {});
-  const [notes, setNotes] = useState(session.notes ?? "");
-  const [fromAI, setFromAI] = useState(!!session.fromAI);
   const [problems, setProblems] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [confirm, setConfirm] = useState<"discard" | "delete" | null>(null);
+  const [confirm, setConfirm] = useState<"discard" | "delete" | null>(session.askDelete ? "delete" : null);
   const [focusId, setFocusId] = useState<string | null>(null);
-  const [aiText, setAIText] = useState("");
-  const [aiBusy, setAIBusy] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   const dirty = useMemo(() => !saved || JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
@@ -64,7 +59,7 @@ export function Editor({
 
   // Live validation from the same Go code that guards saving.
   useEffect(() => {
-    const t = setTimeout(() => CueService.Problems(draft).then(setProblems), 250);
+    const t = setTimeout(() => CueService.Problems(draft).then(setProblems), 200);
     return () => clearTimeout(t);
   }, [draft]);
 
@@ -86,23 +81,16 @@ export function Editor({
     setSaving(true);
     setError("");
     try {
-      const stored = await CueService.Save(draft);
-      setDraft(stored);
-      setSaved(stored);
-      setQuestions({});
-      setNotes("");
-      setFromAI(false);
-      onSaved(stored);
+      onSaved(await CueService.Save(draft));
     } catch (e) {
       setError(errorMessage(e));
-    } finally {
       setSaving(false);
     }
   }, [draft, onSaved]);
 
   const close = useCallback(() => (dirty && !confirm ? setConfirm("discard") : onClose()), [dirty, confirm, onClose]);
 
-  // ⌘S saves, Esc goes back, pasting a URL anywhere adds a link.
+  // ⌘S saves, Esc cancels, pasting a URL anywhere adds a link.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
@@ -113,8 +101,7 @@ export function Editor({
       }
     };
     const onPaste = (e: ClipboardEvent) => {
-      const el = e.target as HTMLElement;
-      if (el.closest("input, textarea")) return;
+      if ((e.target as HTMLElement).closest("input, textarea")) return;
       const text = e.clipboardData?.getData("text") ?? "";
       if (looksLikeURL(text)) {
         e.preventDefault();
@@ -138,24 +125,6 @@ export function Editor({
     setResources((rs) => arrayMove(rs, rs.findIndex((r) => r.id === active.id), rs.findIndex((r) => r.id === over.id)));
   };
 
-  const askAI = async () => {
-    if (!saved || !aiText.trim()) return;
-    setAIBusy(true);
-    setError("");
-    try {
-      const p = await AIService.Propose(aiText, saved.id);
-      setDraft(p.cue);
-      setQuestions(p.questions);
-      setNotes(p.notes);
-      setFromAI(true);
-      setAIText("");
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setAIBusy(false);
-    }
-  };
-
   const remove = async () => {
     if (!saved) return onClose();
     try {
@@ -167,75 +136,67 @@ export function Editor({
     }
   };
 
-  const openQuestions = Object.values(questions).filter(Boolean).length;
+  const openQuestions = draft.resources.filter((r) => questions[r.id]).length;
 
   return (
     <div className="flex h-full flex-col">
-      {/* Top bar */}
-      <div className="drag flex h-[52px] shrink-0 items-center gap-2 border-b border-border pl-[84px] pr-4">
-        <Button variant="ghost" size="sm" onClick={close}>
-          <ArrowLeft className="size-3.5" />
-          Cues
-        </Button>
-        <div className="flex-1" />
-        {confirm === "discard" ? (
-          <ConfirmBar text="Discard unsaved changes?" action="Discard" onConfirm={onClose} onCancel={() => setConfirm(null)} />
-        ) : confirm === "delete" ? (
-          <ConfirmBar text="Move this Cue to the Trash?" action="Move to Trash" onConfirm={remove} onCancel={() => setConfirm(null)} />
-        ) : (
-          <>
-            {saved && (
-              <Button variant="danger" size="sm" onClick={() => setConfirm("delete")}>
-                <Trash2 className="size-3.5" />
-                Delete
-              </Button>
-            )}
-            {saved && !dirty && (
-              <Button size="sm" onClick={() => onStart(saved)}>
-                Start Cue
-                <ArrowRight className="size-3.5" />
-              </Button>
-            )}
-            <Button
-              variant="primary"
-              size="sm"
-              busy={saving}
-              disabled={!dirty || problems.length > 0}
-              onClick={save}
-              title={problems.length ? "Fix the issues below first" : "Save (⌘S)"}
-            >
-              {saved ? "Save" : "Save Cue"}
+      <Toolbar
+        leading={
+          confirm ? null : (
+            <Button variant="ghost" size="sm" onClick={close}>
+              Cancel
             </Button>
-          </>
-        )}
-      </div>
+          )
+        }
+        title={confirm ? null : saved ? "Edit Cue" : "New Cue"}
+        trailing={
+          confirm === "discard" ? (
+            <ConfirmBar text="Discard your changes?" action="Discard" onConfirm={onClose} onCancel={() => setConfirm(null)} />
+          ) : confirm === "delete" ? (
+            <ConfirmBar text="Move this Cue to the Trash?" action="Move to Trash" onConfirm={remove} onCancel={() => setConfirm(null)} />
+          ) : (
+            <>
+              {saved && (
+                <Button variant="danger" size="sm" onClick={() => setConfirm("delete")}>
+                  Move to Trash
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                size="sm"
+                busy={saving}
+                disabled={!dirty || problems.length > 0}
+                onClick={save}
+                title={problems.length ? "Fix the issues below first" : "Save (⌘S)"}
+              >
+                Save
+              </Button>
+            </>
+          )
+        }
+      />
 
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-2xl px-6 pb-16 pt-6">
-          {fromAI && (
-            <div className="mb-5 rounded-xl border border-accent/25 bg-accent-soft px-4 py-3 text-[13px]">
-              <div className="flex items-center gap-2 font-medium text-accent">
-                <Sparkles className="size-4" />
-                Proposed by AI. Review it, then save.
-              </div>
-              {(notes || openQuestions > 0) && (
-                <p className="mt-1 text-xs leading-relaxed text-muted">
-                  {notes}
-                  {openQuestions > 0 && ` ${openQuestions} item${openQuestions === 1 ? " needs" : "s need"} your input.`}
-                </p>
-              )}
+        <div className="mx-auto max-w-[680px] px-8 pb-16 pt-4">
+          {session.fromAI && (openQuestions > 0 || session.notes) && (
+            <div className="mb-6 flex gap-2.5 rounded-2xl bg-red-tint px-4 py-3 text-[13px]">
+              <CueMark size={16} className="mt-[2px]" />
+              <p className="leading-relaxed text-red-on-tint">
+                {openQuestions > 0 && `${openQuestions} item${openQuestions === 1 ? " needs" : "s need"} your input. `}
+                {session.notes}
+              </p>
             </div>
           )}
 
           {/* Identity */}
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-4">
             <input
               value={draft.icon || ""}
               onChange={(e) => set({ icon: lastGrapheme(e.target.value) })}
-              placeholder="✦"
+              placeholder="◌"
               aria-label="Icon (emoji)"
               title="Type or paste an emoji (⌃⌘Space)"
-              className="size-14 shrink-0 rounded-2xl border border-border bg-surface-2 text-center text-[26px] placeholder:text-faint focus:border-accent focus:outline-none"
+              className="size-[72px] shrink-0 rounded-[20px] bg-surface text-center text-[34px] shadow-card placeholder:text-faint focus:outline-none focus:ring-4 focus:ring-red-tint"
             />
             <div className="min-w-0 flex-1">
               <input
@@ -245,85 +206,69 @@ export function Editor({
                 placeholder="Name this Cue"
                 aria-label="Name"
                 spellCheck={false}
-                className="w-full bg-transparent text-2xl font-semibold tracking-tight placeholder:text-faint focus:outline-none"
+                className="w-full bg-transparent text-[28px] font-semibold tracking-[-0.025em] placeholder:text-faint focus:outline-none"
               />
               <input
                 value={draft.description || ""}
                 onChange={(e) => set({ description: e.target.value })}
-                placeholder="What is it for? (optional)"
+                placeholder="What is it for?"
                 aria-label="Description"
-                className="mt-1 w-full bg-transparent text-[13px] text-muted placeholder:text-faint focus:outline-none"
+                className="mt-0.5 w-full bg-transparent text-[15px] text-graphite placeholder:text-faint focus:outline-none"
               />
             </div>
           </div>
 
-          {/* Change with AI */}
-          {saved && aiReady && (
-            <div className="mt-6 flex gap-2">
-              <div className="relative flex-1">
-                <Sparkles className="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-accent" />
-                <Input
-                  value={aiText}
-                  onChange={(e) => setAIText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !dirty && askAI()}
-                  placeholder={dirty ? "Save your changes to edit with AI" : "Change with AI, e.g. “add the Figma app and remove localhost”"}
-                  disabled={dirty || aiBusy}
-                  className="pl-8"
-                />
+          <div className="mt-9">
+            <SectionTitle
+              trailing={
+                <span className="text-[11px] text-faint">
+                  Drag to reorder · paste a link to add it · <Kbd>⌘S</Kbd>
+                </span>
+              }
+            >
+              Opens in this order
+            </SectionTitle>
+
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <SortableContext items={draft.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                <ul className="space-y-2">
+                  {draft.resources.map((r, i) => (
+                    <ResourceRow
+                      key={r.id}
+                      resource={r}
+                      question={questions[r.id]}
+                      autoFocus={focusId === r.id}
+                      onChange={(next) => setResources((rs) => rs.map((x, j) => (j === i ? next : x)))}
+                      onRemove={() => setResources((rs) => rs.filter((_, j) => j !== i))}
+                      onDismissQuestion={() => setQuestions((q) => ({ ...q, [r.id]: undefined }))}
+                    />
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
+
+            {draft.resources.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-hairline px-4 py-8 text-center text-[13px] text-graphite">
+                Add the links, apps, files and folders you use for this activity.
               </div>
-              <Button busy={aiBusy} disabled={dirty || !aiText.trim()} onClick={askAI}>
-                Propose
-              </Button>
+            )}
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {addable.map((t) => (
+                <Button key={t} size="sm" onClick={() => add(t)}>
+                  <TypeIcon type={t} className="size-3.5" />
+                  Add {typeNames[t]}
+                </Button>
+              ))}
             </div>
-          )}
-
-          {/* Resources */}
-          <div className="mt-7 mb-2 flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-faint">Opens in this order</h3>
-            <span className="text-[11px] text-faint">
-              Paste a link anywhere to add it · <Kbd>⌘S</Kbd> to save
-            </span>
-          </div>
-
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={draft.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-              <ul className="space-y-2">
-                {draft.resources.map((r, i) => (
-                  <ResourceRow
-                    key={r.id}
-                    resource={r}
-                    question={questions[r.id]}
-                    autoFocus={focusId === r.id}
-                    onChange={(next) => setResources((rs) => rs.map((x, j) => (j === i ? next : x)))}
-                    onRemove={() => setResources((rs) => rs.filter((_, j) => j !== i))}
-                    onDismissQuestion={() => setQuestions((q) => ({ ...q, [r.id]: undefined }))}
-                  />
-                ))}
-              </ul>
-            </SortableContext>
-          </DndContext>
-
-          {draft.resources.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-[13px] text-muted">
-              Add the links, apps, files and folders you use for this activity.
-            </div>
-          )}
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {addable.map((t) => (
-              <Button key={t} size="sm" onClick={() => add(t)}>
-                <TypeIcon type={t} className="size-3.5" />
-                {typeNames[t]}
-              </Button>
-            ))}
           </div>
 
           {(problems.length > 0 || error) && (
-            <div className="mt-6 space-y-1 rounded-xl bg-surface-2 px-4 py-3 text-xs">
-              {error && <p className="font-medium text-danger">{error}</p>}
+            <div className="mt-6 space-y-1 rounded-2xl bg-fill/70 px-4 py-3 text-[12px]">
+              {error && <p className="font-medium text-red-text">{error}</p>}
               {problems.map((p) => (
-                <p key={p} className="text-muted">
-                  • {p}
+                <p key={p} className="text-graphite">
+                  {p}
                 </p>
               ))}
             </div>
@@ -336,12 +281,12 @@ export function Editor({
 
 function ConfirmBar({ text, action, onConfirm, onCancel }: { text: string; action: string; onConfirm: () => void; onCancel: () => void }) {
   return (
-    <div className="no-drag animate-pop-in flex items-center gap-2">
-      <span className="text-xs text-muted">{text}</span>
+    <div className="animate-pop-in flex items-center gap-2">
+      <span className="text-[12px] text-graphite">{text}</span>
       <Button size="sm" variant="ghost" onClick={onCancel}>
         Cancel
       </Button>
-      <Button size="sm" className="!bg-danger !text-white !border-transparent" onClick={onConfirm}>
+      <Button size="sm" variant="primary" onClick={onConfirm}>
         {action}
       </Button>
     </div>

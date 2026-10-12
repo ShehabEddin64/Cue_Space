@@ -53,7 +53,6 @@ func main() {
 	aiService := &services.AIService{
 		Settings: settings.Open(filepath.Join(dir, "settings.json")),
 		Secrets:  secrets.Keychain{},
-		Cues:     cues,
 		System:   system,
 	}
 
@@ -73,22 +72,69 @@ func main() {
 		},
 	})
 
+	app.Menu.Set(menuBar(app))
+
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Cue Space",
-		Width:     1100,
-		Height:    720,
-		MinWidth:  720,
-		MinHeight: 480,
+		Width:     1180,
+		Height:    760,
+		MinWidth:  760,
+		MinHeight: 520,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 52,
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
-		BackgroundColour: application.NewRGB(18, 18, 20),
-		URL:              "/",
+		URL: "/",
 	})
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// menuBar puts every command in the menu bar, as Mac apps should. Commands
+// that act on the UI are forwarded to the frontend as menu events.
+func menuBar(app *application.App) *application.Menu {
+	send := func(action string) func(*application.Context) {
+		return func(*application.Context) { app.Event.Emit(services.EventMenu, action) }
+	}
+	menu := application.NewMenu()
+
+	appMenu := menu.AddSubmenu("Cue Space")
+	appMenu.AddRole(application.About)
+	appMenu.AddSeparator()
+	appMenu.Add("Settings…").SetAccelerator("CmdOrCtrl+,").OnClick(send("settings"))
+	appMenu.AddSeparator()
+	appMenu.AddRole(application.ServicesMenu)
+	appMenu.AddSeparator()
+	appMenu.AddRole(application.Hide)
+	appMenu.AddRole(application.HideOthers)
+	appMenu.AddRole(application.UnHide)
+	appMenu.AddSeparator()
+	appMenu.AddRole(application.Quit)
+
+	file := menu.AddSubmenu("File")
+	file.Add("New Cue…").SetAccelerator("CmdOrCtrl+N").OnClick(send("new-cue"))
+	file.Add("New Blank Cue").SetAccelerator("CmdOrCtrl+Alt+N").OnClick(send("new-blank-cue"))
+	file.AddSeparator()
+	file.Add("Start Cue").SetAccelerator("CmdOrCtrl+Return").OnClick(send("start-cue"))
+	file.Add("Edit Cue").SetAccelerator("CmdOrCtrl+E").OnClick(send("edit-cue"))
+	file.Add("Move Cue to Trash…").OnClick(send("delete-cue"))
+	file.AddSeparator()
+	file.Add("Show Cues Folder in Finder").OnClick(send("reveal-folder"))
+	file.AddSeparator()
+	file.AddRole(application.CloseWindow)
+
+	menu.AddRole(application.EditMenu)
+
+	view := menu.AddSubmenu("View")
+	view.Add("Home").SetAccelerator("CmdOrCtrl+1").OnClick(send("home"))
+	view.Add("Find Cue").SetAccelerator("CmdOrCtrl+F").OnClick(send("find"))
+	view.AddSeparator()
+	view.Add("Toggle Sidebar").SetAccelerator("CmdOrCtrl+Ctrl+S").OnClick(send("toggle-sidebar"))
+	view.AddRole(application.ToggleFullscreen)
+
+	menu.AddRole(application.WindowMenu)
+	return menu
 }

@@ -16,11 +16,21 @@ import * as cue$0 from "../internal/cue/models.js";
 import * as store$0 from "../internal/store/models.js";
 
 /**
- * AISettings is what the Settings screen shows. The key itself never leaves Go.
+ * AISettings is what the UI shows about the AI. The key itself never leaves Go.
  */
 export class AISettings {
     "config": ai$0.Config;
     "hasKey": boolean;
+
+    /**
+     * Ready is true when Describe can be used.
+     */
+    "ready": boolean;
+
+    /**
+     * Disclosure names the model and where requests go.
+     */
+    "disclosure": ai$0.Disclosure;
 
     /** Creates a new AISettings instance. */
     constructor($$source: Partial<AISettings> = {}) {
@@ -29,6 +39,12 @@ export class AISettings {
         }
         if (!("hasKey" in $$source)) {
             this["hasKey"] = false;
+        }
+        if (!("ready" in $$source)) {
+            this["ready"] = false;
+        }
+        if (!("disclosure" in $$source)) {
+            this["disclosure"] = (new ai$0.Disclosure());
         }
 
         Object.assign(this, $$source);
@@ -39,9 +55,13 @@ export class AISettings {
      */
     static createFrom($$source: any = {}): AISettings {
         const $$createField0_0 = $$createType0;
+        const $$createField3_0 = $$createType1;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("config" in $$parsedSource) {
             $$parsedSource["config"] = $$createField0_0($$parsedSource["config"]);
+        }
+        if ("disclosure" in $$parsedSource) {
+            $$parsedSource["disclosure"] = $$createField3_0($$parsedSource["disclosure"]);
         }
         return new AISettings($$parsedSource as Partial<AISettings>);
     }
@@ -74,8 +94,8 @@ export class Library {
      * Creates a new Library instance from a string or object.
      */
     static createFrom($$source: any = {}): Library {
-        const $$createField0_0 = $$createType2;
-        const $$createField1_0 = $$createType4;
+        const $$createField0_0 = $$createType3;
+        const $$createField1_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("cues" in $$parsedSource) {
             $$parsedSource["cues"] = $$createField0_0($$parsedSource["cues"]);
@@ -89,7 +109,8 @@ export class Library {
 
 // Private type creation functions
 const $$createType0 = ai$0.Config.createFrom;
-const $$createType1 = cue$0.Cue.createFrom;
-const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = store$0.LoadError.createFrom;
-const $$createType4 = $Create.Array($$createType3);
+const $$createType1 = ai$0.Disclosure.createFrom;
+const $$createType2 = cue$0.Cue.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = store$0.LoadError.createFrom;
+const $$createType5 = $Create.Array($$createType4);

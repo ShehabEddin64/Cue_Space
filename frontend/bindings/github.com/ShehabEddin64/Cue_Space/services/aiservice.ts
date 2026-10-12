@@ -8,6 +8,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as ai$0 from "../internal/ai/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as cue$0 from "../internal/cue/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -20,11 +23,12 @@ export function GetSettings(): $CancellablePromise<$models.AISettings> {
 }
 
 /**
- * Propose asks the AI for a Cue. With editID set, it edits that Cue. The
+ * Propose asks the AI for a Cue. With base set (a saved Cue or an earlier,
+ * unsaved proposal), the AI changes that Cue instead of starting over. The
  * result is only a proposal: nothing is saved until the user saves it.
  */
-export function Propose(description: string, editID: string): $CancellablePromise<ai$0.Proposal> {
-    return $Call.ByID(1484711540, description, editID).then(($result: any) => {
+export function Propose(description: string, base: cue$0.Cue | null): $CancellablePromise<ai$0.Proposal> {
+    return $Call.ByID(1484711540, description, base).then(($result: any) => {
         return $$createType1($result);
     });
 }

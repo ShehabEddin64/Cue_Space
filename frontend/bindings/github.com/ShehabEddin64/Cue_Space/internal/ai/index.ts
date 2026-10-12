@@ -3,5 +3,6 @@
 
 export {
     Config,
+    Disclosure,
     Proposal
 } from "./models.js";

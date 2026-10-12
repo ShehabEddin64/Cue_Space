@@ -15,7 +15,7 @@ export type { App } from "../bindings/github.com/ShehabEddin64/Cue_Space/interna
 export { Status } from "../bindings/github.com/ShehabEddin64/Cue_Space/internal/runner";
 export type { Result, StepResult } from "../bindings/github.com/ShehabEddin64/Cue_Space/internal/runner";
 export { Config } from "../bindings/github.com/ShehabEddin64/Cue_Space/internal/ai";
-export type { Proposal } from "../bindings/github.com/ShehabEddin64/Cue_Space/internal/ai";
+export type { Disclosure, Proposal } from "../bindings/github.com/ShehabEddin64/Cue_Space/internal/ai";
 
 import { Resource, ResourceType } from "../bindings/github.com/ShehabEddin64/Cue_Space/internal/cue";
 
@@ -63,4 +63,26 @@ export function timeAgo(iso?: string): string {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   if (s < 86400 * 30) return `${Math.floor(s / 86400)}d ago`;
   return new Date(iso).toLocaleDateString();
+}
+
+/** Where AI requests go, in one honest sentence. */
+export function disclosureSentence(d: { model: string; vendor: string; local: boolean }): string {
+  if (!d.model && !d.vendor) return "";
+  if (d.local) return `Runs on this Mac with ${d.model}${d.vendor ? ` in ${d.vendor}` : ""}. Nothing leaves your Mac.`;
+  return `Your description and the names of apps on this Mac are sent to ${d.vendor} (${d.model}). Cue Space has no servers.`;
+}
+
+/** Examples that show what describing a Cue can do. */
+export const examplePrompts = [
+  { label: "Work on a project", text: "Work on Atlas: my GitHub repo, my IDE, Claude, localhost:3000 and the docs" },
+  { label: "Study a subject", text: "Study linear algebra: my textbook PDF, notes folder, Calculator and the course website" },
+  { label: "Design session", text: "Design session: Figma, my moodboard folder and Dribbble" },
+];
+
+/** "github.com/me/atlas" → "https://github.com/me/atlas"; leaves full URLs alone. */
+export function normalizeURL(raw: string): string {
+  const url = raw.trim();
+  if (/^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(url)) return "https://" + url;
+  if (/^localhost(:\d+)?(\/\S*)?$/.test(url)) return "http://" + url;
+  return url;
 }
