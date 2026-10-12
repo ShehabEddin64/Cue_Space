@@ -17,6 +17,7 @@ import (
 	"github.com/ShehabEddin64/Cue_Space/internal/ai"
 	"github.com/ShehabEddin64/Cue_Space/internal/cue"
 	"github.com/ShehabEddin64/Cue_Space/internal/platform"
+	"github.com/ShehabEddin64/Cue_Space/internal/resolve"
 	"github.com/ShehabEddin64/Cue_Space/internal/runner"
 	"github.com/ShehabEddin64/Cue_Space/internal/secrets"
 	"github.com/ShehabEddin64/Cue_Space/internal/settings"
@@ -41,7 +42,9 @@ func init() {
 type CueService struct {
 	Store  *store.Store
 	Runner *runner.Runner
-	cancel context.CancelFunc
+	// OnChange runs after the Cues on disk change (used to refresh menus).
+	OnChange func()
+	cancel   context.CancelFunc
 }
 
 // Library is everything the Library screen needs.
@@ -55,6 +58,9 @@ func (s *CueService) ServiceStartup(ctx context.Context, _ application.ServiceOp
 	ctx, s.cancel = context.WithCancel(ctx)
 	return s.Store.Watch(ctx, func() {
 		application.Get().Event.Emit(EventCuesChanged, "")
+		if s.OnChange != nil {
+			s.OnChange()
+		}
 	})
 }
 
@@ -159,6 +165,14 @@ func (s *SystemService) ChooseFolder() (string, error) {
 	return collapseHome(p), err
 }
 
+// ResolveItems turns text like "figma, ~/Notes, github.com/me/atlas" into
+// resources locally, without AI. Anything it can't resolve is returned.
+func (s *SystemService) ResolveItems(text string) resolve.Result {
+	home, _ := os.UserHomeDir()
+	r := resolve.Resolver{Apps: s.InstalledApps(), Home: home}
+	return r.Resolve(resolve.Split(text))
+}
+
 // RevealCuesFolder shows the folder holding the .cue.json files in Finder.
 func (s *SystemService) RevealCuesFolder() error {
 	return platform.Reveal(s.CuesFolder)
@@ -234,12 +248,8 @@ func (s *AIService) SaveSettings(cfg ai.Config, apiKey string, clearKey bool) er
 			return err
 		}
 	}
-	st, err := s.Settings.Load()
-	if err != nil {
-		return err
-	}
-	st.AI = cfg
-	return s.Settings.Save(st)
+	_, err := s.Settings.Update(func(st *settings.Settings) { st.AI = cfg })
+	return err
 }
 
 func (s *AIService) provider() (ai.Provider, error) {
@@ -263,6 +273,16 @@ func (s *AIService) TestConnection(ctx context.Context) error {
 	return p.Check(ctx)
 }
 
+// Resolve asks the AI to turn phrases that couldn't be resolved locally into
+// resources. It uses a much smaller prompt than Propose.
+func (s *AIService) Resolve(ctx context.Context, phrases []string) (ai.Resolution, error) {
+	p, err := s.provider()
+	if err != nil {
+		return ai.Resolution{}, err
+	}
+	return ai.Resolve(ctx, p, phrases, s.System.InstalledApps())
+}
+
 // Propose asks the AI for a Cue. With base set (a saved Cue or an earlier,
 // unsaved proposal), the AI changes that Cue instead of starting over. The
 // result is only a proposal: nothing is saved until the user saves it.
@@ -275,4 +295,61 @@ func (s *AIService) Propose(ctx context.Context, description string, base *cue.C
 		return ai.Proposal{}, err
 	}
 	return ai.Propose(ctx, p, description, base, s.System.InstalledApps())
+}
+
+// ---------------------------------------------------------------- Prefs
+
+type PrefsService struct {
+	Settings *settings.File
+	// OnChange runs after prefs are saved (used to refresh menus).
+	OnChange func(settings.Prefs)
+}
+
+func (s *PrefsService) ServiceStartup(context.Context, application.ServiceOptions) error {
+	st, err := s.Settings.Load()
+	if err == nil {
+		platform.SetAppearance(st.Prefs.Appearance)
+	}
+	return nil
+}
+
+func (s *PrefsService) GetPrefs() (settings.Prefs, error) {
+	st, err := s.Settings.Load()
+	return st.Prefs, err
+}
+
+// SavePrefs stores interface preferences and applies the appearance.
+func (s *PrefsService) SavePrefs(p settings.Prefs) (settings.Prefs, error) {
+	st, err := s.Settings.Update(func(st *settings.Settings) { st.Prefs = p })
+	if err != nil {
+		return p, err
+	}
+	platform.SetAppearance(st.Prefs.Appearance)
+	if s.OnChange != nil {
+		s.OnChange(st.Prefs)
+	}
+	return st.Prefs, nil
+}
+
+// ShortcutOrder is the order Cues get ⌘1–⌘9 in: pinned Cues first, in pinned
+// order, then the rest as listed (by name). The sidebar uses the same order.
+func ShortcutOrder(cues []cue.Cue, pinned []string) []cue.Cue {
+	byID := make(map[string]cue.Cue, len(cues))
+	for _, c := range cues {
+		byID[c.ID] = c
+	}
+	out := make([]cue.Cue, 0, len(cues))
+	used := map[string]bool{}
+	for _, id := range pinned {
+		if c, ok := byID[id]; ok && !used[id] {
+			out = append(out, c)
+			used[id] = true
+		}
+	}
+	for _, c := range cues {
+		if !used[c.ID] {
+			out = append(out, c)
+		}
+	}
+	return out
 }

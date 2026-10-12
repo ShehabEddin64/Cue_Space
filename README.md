@@ -33,6 +33,24 @@ Cue Space proposes the Cue using the apps you actually have installed. You revie
 
 *Your computer. Your Cues. Your AI.*
 
+## Commands and shortcuts
+
+Type `/` in any composer. Most commands run on your Mac and use no AI tokens at all:
+
+| Command | Where | AI |
+| --- | --- | --- |
+| `/create <what it’s for>` | Home | Yes |
+| `/new <name>` · `/start <cue>` · `/open <cue>` | Home | No |
+| `/add figma, ~/Notes, github.com/me/repo` | A Cue, or while refining a proposal | Only for items it can’t find on your Mac, with a small request |
+| `/remove` · `/off` · `/on <item>` | A Cue, or while refining | No |
+| `/rename` · `/icon` · `/describe` · `/pin` · `/start` | A Cue | No |
+
+AI requests are kept small: the model sees app names only (bundle ids are filled in locally), and an existing Cue is sent as a few compact lines rather than JSON.
+
+Keyboard: your first nine Cues get **⌘1–⌘9** (pinned first). The Cues menu lists them. Press ⌘/ to see every shortcut.
+
+Widgets and Shortcuts-app actions need a native Swift extension. See [docs/widgets.md](docs/widgets.md).
+
 ## Your Cues are files
 
 Each Cue is one JSON file in `~/Library/Application Support/CueSpace/cues/`. Read it, edit it in any editor (the app updates live), back it up, sync it, or put it in git. The format is defined by [`schema/cue.v1.json`](schema/cue.v1.json).
@@ -64,8 +82,10 @@ Cue Space follows Apple’s Human Interface Guidelines for structure and its own
 - **Identity.** Cue Red `#D93025` for the mark and primary actions only, Ink `#18181A`, Canvas `#F6F5F3`, Night `#111113` in dark mode. Geist for the interface, Geist Mono for paths and URLs. Fonts are bundled, so nothing loads from the network. Tokens are in [`frontend/src/index.css`](frontend/src/index.css), with contrast ratios noted.
 - **The mark.** A ring (the intention) and a dot (the cue that closes it). While the AI works, the dot travels the ring.
 - **AI first, never required.** Home leads with the composer. Proposals are reviewed in place and can be fixed, refined, retried, undone or discarded. The app always says which model is used and where requests go. Building a Cue by hand is always one click away.
-- **Mac conventions.** A sidebar you can hide (⌃⌘S), every command in the menu bar, Settings at ⌘,, and light and dark appearance that follow the system.
-- **App icon.** `build/appicon.icon` is the Icon Composer source for macOS 26. Compiling it into `Assets.car` needs full Xcode. Without Xcode, the build uses `build/darwin/icons.icns`, generated from `build/appicon.png`.
+- **Mac conventions.** A sidebar you can hide (⌃⌘S), every command in the menu bar, Settings at ⌘,, and an Appearance setting (System, Light or Dark).
+- **Customizable Home.** Change the greeting, show, hide and reorder the sections (Suggestions, Pinned, Jump back in) from View › Customize Home.
+- **First run.** A five-step welcome tour, replayable from Help › Welcome Tour.
+- **App icon.** A full-bleed Cue Red square with the mark and a soft shadow, so macOS 26 masks it into the standard shape instead of placing it on a plate. `build/appicon.icon` is the Icon Composer source; compiling it into `Assets.car` needs full Xcode, so builds use `build/darwin/icons.icns`, generated from `build/appicon.png`.
 
 ## Development
 

@@ -8,6 +8,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as platform$0 from "../internal/platform/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as resolve$0 from "../internal/resolve/models.js";
 
 /**
  * ChooseFile shows an Open panel and returns the path ("" if cancelled).
@@ -49,6 +52,16 @@ export function RefreshApps(): $CancellablePromise<platform$0.App[]> {
 }
 
 /**
+ * ResolveItems turns text like "figma, ~/Notes, github.com/me/atlas" into
+ * resources locally, without AI. Anything it can't resolve is returned.
+ */
+export function ResolveItems(text: string): $CancellablePromise<resolve$0.Result> {
+    return $Call.ByID(3191824261, text).then(($result: any) => {
+        return $$createType2($result);
+    });
+}
+
+/**
  * RevealCuesFolder shows the folder holding the .cue.json files in Finder.
  */
 export function RevealCuesFolder(): $CancellablePromise<void> {
@@ -58,3 +71,4 @@ export function RevealCuesFolder(): $CancellablePromise<void> {
 // Private type creation functions
 const $$createType0 = platform$0.App.createFrom;
 const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = resolve$0.Result.createFrom;

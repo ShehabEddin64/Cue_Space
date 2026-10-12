@@ -3,10 +3,12 @@
 
 import * as AIService from "./aiservice.js";
 import * as CueService from "./cueservice.js";
+import * as PrefsService from "./prefsservice.js";
 import * as SystemService from "./systemservice.js";
 export {
     AIService,
     CueService,
+    PrefsService,
     SystemService
 };
 

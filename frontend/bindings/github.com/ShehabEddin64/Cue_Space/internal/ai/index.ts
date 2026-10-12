@@ -4,5 +4,6 @@
 export {
     Config,
     Disclosure,
-    Proposal
+    Proposal,
+    Resolution
 } from "./models.js";

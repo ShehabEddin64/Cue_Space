@@ -5,20 +5,33 @@ import {
   Cue,
   CueService,
   errorMessage,
+  Prefs,
+  shortcutOrder,
   SystemService,
   type AISettings,
   type Library as LibraryData,
   type Proposal,
 } from "./api";
 import { CueDetail } from "./components/CueDetail";
+import { CustomizeHome } from "./components/CustomizeHome";
 import { Editor, type EditorSession } from "./components/Editor";
 import { Home, type HomeHandle } from "./components/Home";
+import { Library } from "./components/Library";
 import { RunToast, type RunReport } from "./components/RunToast";
 import { SettingsDialog } from "./components/SettingsDialog";
+import { ShortcutsSheet } from "./components/ShortcutsSheet";
 import { Sidebar, type SidebarHandle } from "./components/Sidebar";
 import { LayoutContext } from "./components/Toolbar";
+import { WelcomeTour } from "./components/WelcomeTour";
+import { PrefsProvider, usePrefs } from "./prefs";
 
-type View = { kind: "home" } | { kind: "cue"; id: string } | { kind: "edit"; session: EditorSession; back: View };
+type View =
+  | { kind: "home" }
+  | { kind: "library" }
+  | { kind: "cue"; id: string }
+  | { kind: "edit"; session: EditorSession; back: View };
+
+type Sheet = "settings" | "customize" | "shortcuts" | "tour" | null;
 
 function loadSidebarPref(): boolean {
   try {
@@ -29,13 +42,22 @@ function loadSidebarPref(): boolean {
 }
 
 export default function App() {
+  return (
+    <PrefsProvider>
+      <Shell />
+    </PrefsProvider>
+  );
+}
+
+function Shell() {
+  const { prefs, loaded, save, togglePin } = usePrefs();
   const [library, setLibrary] = useState<LibraryData | null>(null);
   const [loadError, setLoadError] = useState("");
   const [ai, setAI] = useState<AISettings | null>(null);
   const [view, setView] = useState<View>({ kind: "home" });
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(loadSidebarPref);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sheet, setSheet] = useState<Sheet>(null);
   const [starting, setStarting] = useState<string | null>(null);
   const [report, setReport] = useState<(RunReport & { cueId: string }) | null>(null);
   const pendingPrompt = useRef<string | null>(null);
@@ -44,6 +66,11 @@ export default function App() {
 
   const cues = library?.cues ?? [];
   const current = view.kind === "cue" ? cues.find((c) => c.id === view.id) : undefined;
+  const order = shortcutOrder(cues, prefs.pinned);
+  const shortcutFor = (c: Cue) => {
+    const i = order.findIndex((x) => x.id === c.id);
+    return i >= 0 && i < 9 ? `⌘${i + 1}` : undefined;
+  };
 
   const reload = useCallback(() => {
     CueService.List()
@@ -60,6 +87,11 @@ export default function App() {
     // Edits to .cue.json files, from this app or any other, refresh everything.
     return Events.On("cues:changed", reload);
   }, [reload]);
+
+  // First launch: show the welcome tour once.
+  useEffect(() => {
+    if (loaded && !prefs.onboarded) setSheet("tour");
+  }, [loaded, prefs.onboarded]);
 
   // A Cue that disappears (deleted, or its file removed) sends you home.
   useEffect(() => {
@@ -81,7 +113,8 @@ export default function App() {
     setView({ kind: "home" });
     if (focus) requestAnimationFrame(() => home.current?.focusComposer());
   };
-  const newBlank = () => setView((v) => ({ kind: "edit", session: { cue: new Cue({ schemaVersion: 1, resources: [] }), saved: null }, back: v }));
+  const newBlank = (name?: string) =>
+    setView((v) => ({ kind: "edit", session: { cue: new Cue({ schemaVersion: 1, name: name ?? "", resources: [] }), saved: null }, back: v }));
   const editCue = (c: Cue, askDelete = false) => setView((v) => ({ kind: "edit", session: { cue: c, saved: c, askDelete }, back: v }));
   const editProposal = (p: Proposal) =>
     setView((v) => ({ kind: "edit", session: { cue: p.cue, saved: null, questions: p.questions, notes: p.notes, fromAI: true }, back: v }));
@@ -93,7 +126,11 @@ export default function App() {
   };
   const connect = (pending?: string) => {
     if (pending) pendingPrompt.current = pending;
-    setSettingsOpen(true);
+    setSheet("settings");
+  };
+  const finishTour = () => {
+    setSheet(null);
+    if (!prefs.onboarded) save((p) => new Prefs({ ...p, onboarded: true }));
   };
 
   const start = async (c: Cue) => {
@@ -112,15 +149,28 @@ export default function App() {
   // Menu bar commands (every command lives in the menu bar, per the HIG).
   const onMenu = useRef<(action: string) => void>(() => {});
   onMenu.current = (action: string) => {
+    if (action.startsWith("start:")) {
+      const c = cues.find((x) => x.id === action.slice(6));
+      return c && void start(c);
+    }
     switch (action) {
       case "settings":
-        return setSettingsOpen(true);
+        return setSheet("settings");
       case "new-cue":
         return goHome(true);
       case "new-blank-cue":
         return newBlank();
       case "home":
         return goHome();
+      case "library":
+        return setView({ kind: "library" });
+      case "customize-home":
+        setView({ kind: "home" });
+        return setSheet("customize");
+      case "tour":
+        return setSheet("tour");
+      case "shortcuts":
+        return setSheet("shortcuts");
       case "find":
         if (!sidebarOpen) toggleSidebar();
         return requestAnimationFrame(() => sidebar.current?.focusSearch());
@@ -132,6 +182,8 @@ export default function App() {
         return current && void start(current);
       case "edit-cue":
         return current && editCue(current);
+      case "pin-cue":
+        return current && void togglePin(current.id);
       case "delete-cue":
         return current && editCue(current, true);
     }
@@ -143,13 +195,16 @@ export default function App() {
     const pending = pendingPrompt.current;
     if (s.ready && pending) {
       pendingPrompt.current = null;
-      setSettingsOpen(false);
+      setSheet(null);
       setView({ kind: "home" });
       requestAnimationFrame(() => home.current?.compose(pending));
     }
   };
 
   const closeReport = useCallback(() => setReport(null), []);
+
+  const selected =
+    view.kind === "home" ? "home" : view.kind === "library" ? "library" : view.kind === "cue" ? view.id : (view.session.saved?.id ?? null);
 
   return (
     <LayoutContext.Provider value={{ sidebarOpen, toggleSidebar }}>
@@ -158,16 +213,17 @@ export default function App() {
           <Sidebar
             ref={sidebar}
             cues={cues}
-            selected={view.kind === "home" ? "home" : view.kind === "cue" ? view.id : view.session.saved?.id ?? null}
+            selected={selected}
             query={query}
             ai={ai}
             starting={starting}
             onQuery={setQuery}
             onHome={() => goHome()}
+            onLibrary={() => setView({ kind: "library" })}
             onSelect={(c) => setView({ kind: "cue", id: c.id })}
             onStart={start}
-            onNewBlank={newBlank}
-            onSettings={() => setSettingsOpen(true)}
+            onNewBlank={() => newBlank()}
+            onSettings={() => setSheet("settings")}
             onHide={toggleSidebar}
           />
         )}
@@ -201,6 +257,19 @@ export default function App() {
               onConnect={connect}
               onSaved={openSaved}
               onEditProposal={editProposal}
+              onCustomize={() => setSheet("customize")}
+              onHelp={() => setSheet("shortcuts")}
+            />
+          )}
+
+          {view.kind === "library" && (
+            <Library
+              cues={cues}
+              starting={starting}
+              onOpen={(c) => setView({ kind: "cue", id: c.id })}
+              onStart={start}
+              onNewBlank={() => newBlank()}
+              onNew={() => goHome(true)}
             />
           )}
 
@@ -210,11 +279,13 @@ export default function App() {
               cue={current}
               ai={ai}
               starting={starting === current.id}
+              shortcut={shortcutFor(current)}
               onStart={() => start(current)}
               onEdit={() => editCue(current)}
               onConnect={() => connect()}
               onSaved={openSaved}
               onEditProposal={editProposal}
+              onHelp={() => setSheet("shortcuts")}
             />
           )}
 
@@ -233,14 +304,26 @@ export default function App() {
         </main>
       </div>
 
-      {settingsOpen && (
+      {sheet === "settings" && (
         <SettingsDialog
           folder={library?.folder ?? ""}
           onClose={() => {
             pendingPrompt.current = null;
-            setSettingsOpen(false);
+            setSheet(null);
           }}
           onSaved={onAISaved}
+        />
+      )}
+      {sheet === "customize" && <CustomizeHome onClose={() => setSheet(null)} />}
+      {sheet === "shortcuts" && <ShortcutsSheet onClose={() => setSheet(null)} />}
+      {sheet === "tour" && (
+        <WelcomeTour
+          aiReady={!!ai?.ready}
+          onDone={finishTour}
+          onConnect={() => {
+            finishTour();
+            setSheet("settings");
+          }}
         />
       )}
 

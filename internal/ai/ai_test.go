@@ -51,8 +51,11 @@ func TestProposeAtlas(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(p.got.System, "Cursor — com.todesktop.230313mzl4w4u92") {
+	if !strings.Contains(p.got.System, "Installed apps: Claude, Cursor, Safari") {
 		t.Error("installed apps missing from the prompt")
+	}
+	if strings.Contains(p.got.System, "com.todesktop") {
+		t.Error("bundle ids should not be sent to the model")
 	}
 	c := prop.Cue
 	if c.Name != "Atlas" || c.ID == "" {
@@ -93,8 +96,8 @@ func TestProposeEditKeepsIdentity(t *testing.T) {
 	if prop.Cue.ID != "keep-me" {
 		t.Errorf("id = %q", prop.Cue.ID)
 	}
-	if !strings.Contains(p.got.User, `"https://a.b"`) {
-		t.Error("existing cue not sent to the model")
+	if !strings.Contains(p.got.User, `1. url "https://a.b" https://a.b`) {
+		t.Errorf("existing cue not sent compactly: %q", p.got.User)
 	}
 	if got := prop.Cue.Resources[1].App; got.BundleID != "com.apple.calculator" || got.Name != "Calculator" {
 		t.Errorf("app matched by name = %+v", got)
@@ -241,5 +244,26 @@ func TestDescribe(t *testing.T) {
 		if got := Describe(c.cfg); got != c.want {
 			t.Errorf("Describe(%+v) = %+v, want %+v", c.cfg, got, c.want)
 		}
+	}
+}
+
+func TestResolveAI(t *testing.T) {
+	answer := `{"resources":[
+	  {"type":"app","label":"VS Code","url":null,"appName":"Cursor","path":null,"openWithName":null,"needsInput":null},
+	  {"type":"url","label":"React docs","url":"https://react.dev","appName":null,"path":null,"openWithName":null,"needsInput":null},
+	  {"type":"folder","label":"Notes","url":null,"appName":null,"path":null,"openWithName":null,"needsInput":"Where is your notes folder?"}]}`
+	p := &fakeProvider{answer: answer}
+	res, err := Resolve(context.Background(), p, []string{"my editor", "react docs", "notes"}, installed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Resources) != 3 || res.Resources[0].App.BundleID != "com.todesktop.230313mzl4w4u92" {
+		t.Fatalf("resources = %+v", res.Resources)
+	}
+	if res.Questions[res.Resources[2].ID] == "" {
+		t.Error("question for the folder missing")
+	}
+	if !strings.Contains(p.got.User, "- my editor") || len(p.got.System) > 800 {
+		t.Errorf("resolve prompt should be short and list phrases: %d chars", len(p.got.System))
 	}
 }

@@ -2,9 +2,12 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
@@ -50,11 +53,13 @@ func main() {
 		Store:  cues,
 		Runner: &runner.Runner{Launcher: platform.NewLauncher(), Home: home},
 	}
+	settingsFile := settings.Open(filepath.Join(dir, "settings.json"))
 	aiService := &services.AIService{
-		Settings: settings.Open(filepath.Join(dir, "settings.json")),
+		Settings: settingsFile,
 		Secrets:  secrets.Keychain{},
 		System:   system,
 	}
+	prefsService := &services.PrefsService{Settings: settingsFile}
 
 	app := application.New(application.Options{
 		Name:        "Cue Space",
@@ -63,6 +68,7 @@ func main() {
 			application.NewService(cueService),
 			application.NewService(system),
 			application.NewService(aiService),
+			application.NewService(prefsService),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -72,7 +78,18 @@ func main() {
 		},
 	})
 
-	app.Menu.Set(menuBar(app))
+	menu, refreshCues := menuBar(app, cues, settingsFile)
+	app.Menu.Set(menu)
+	// Keep the Cues menu (and its ⌘1–⌘9 shortcuts) in step with the library.
+	cueService.OnChange = refreshCues
+	// Only pins change the menu; greeting edits and the like don't.
+	var lastPinned string
+	prefsService.OnChange = func(p settings.Prefs) {
+		if pinned := strings.Join(p.Pinned, ","); pinned != lastPinned {
+			lastPinned = pinned
+			refreshCues()
+		}
+	}
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Cue Space",
@@ -94,8 +111,9 @@ func main() {
 }
 
 // menuBar puts every command in the menu bar, as Mac apps should. Commands
-// that act on the UI are forwarded to the frontend as menu events.
-func menuBar(app *application.App) *application.Menu {
+// that act on the UI are forwarded to the frontend as menu events. The
+// returned function rebuilds the Cues menu when Cues or pins change.
+func menuBar(app *application.App, cues *store.Store, prefs *settings.File) (*application.Menu, func()) {
 	send := func(action string) func(*application.Context) {
 		return func(*application.Context) { app.Event.Emit(services.EventMenu, action) }
 	}
@@ -118,10 +136,6 @@ func menuBar(app *application.App) *application.Menu {
 	file.Add("New Cue…").SetAccelerator("CmdOrCtrl+N").OnClick(send("new-cue"))
 	file.Add("New Blank Cue").SetAccelerator("CmdOrCtrl+Alt+N").OnClick(send("new-blank-cue"))
 	file.AddSeparator()
-	file.Add("Start Cue").SetAccelerator("CmdOrCtrl+Return").OnClick(send("start-cue"))
-	file.Add("Edit Cue").SetAccelerator("CmdOrCtrl+E").OnClick(send("edit-cue"))
-	file.Add("Move Cue to Trash…").OnClick(send("delete-cue"))
-	file.AddSeparator()
 	file.Add("Show Cues Folder in Finder").OnClick(send("reveal-folder"))
 	file.AddSeparator()
 	file.AddRole(application.CloseWindow)
@@ -129,12 +143,51 @@ func menuBar(app *application.App) *application.Menu {
 	menu.AddRole(application.EditMenu)
 
 	view := menu.AddSubmenu("View")
-	view.Add("Home").SetAccelerator("CmdOrCtrl+1").OnClick(send("home"))
+	view.Add("Home").SetAccelerator("CmdOrCtrl+Shift+H").OnClick(send("home"))
+	view.Add("All Cues").SetAccelerator("CmdOrCtrl+Shift+C").OnClick(send("library"))
 	view.Add("Find Cue").SetAccelerator("CmdOrCtrl+F").OnClick(send("find"))
 	view.AddSeparator()
+	view.Add("Customize Home…").OnClick(send("customize-home"))
 	view.Add("Toggle Sidebar").SetAccelerator("CmdOrCtrl+Ctrl+S").OnClick(send("toggle-sidebar"))
 	view.AddRole(application.ToggleFullscreen)
 
+	cuesMenu := menu.AddSubmenu("Cues")
+
 	menu.AddRole(application.WindowMenu)
-	return menu
+
+	help := menu.AddSubmenu("Help")
+	help.Add("Welcome Tour").OnClick(send("tour"))
+	help.Add("Keyboard Shortcuts").SetAccelerator("CmdOrCtrl+/").OnClick(send("shortcuts"))
+
+	var mu sync.Mutex
+	refresh := func() {
+		mu.Lock()
+		defer mu.Unlock()
+		list, _, _ := cues.List()
+		st, _ := prefs.Load()
+		ordered := services.ShortcutOrder(list, st.Prefs.Pinned)
+
+		cuesMenu.Clear()
+		for i, c := range ordered {
+			if i == 9 {
+				break
+			}
+			label := "Start " + c.Name
+			if c.Icon != "" {
+				label = c.Icon + "  " + label
+			}
+			cuesMenu.Add(label).SetAccelerator(fmt.Sprintf("CmdOrCtrl+%d", i+1)).OnClick(send("start:" + c.ID))
+		}
+		if len(ordered) == 0 {
+			cuesMenu.Add("No Cues Yet").SetEnabled(false)
+		}
+		cuesMenu.AddSeparator()
+		cuesMenu.Add("Start This Cue").SetAccelerator("CmdOrCtrl+Return").OnClick(send("start-cue"))
+		cuesMenu.Add("Edit This Cue").SetAccelerator("CmdOrCtrl+E").OnClick(send("edit-cue"))
+		cuesMenu.Add("Pin or Unpin This Cue").SetAccelerator("CmdOrCtrl+Shift+P").OnClick(send("pin-cue"))
+		cuesMenu.Add("Move This Cue to Trash…").OnClick(send("delete-cue"))
+		menu.Update()
+	}
+	refresh()
+	return menu, refresh
 }

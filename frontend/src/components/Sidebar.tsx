@@ -1,6 +1,7 @@
-import { House, PanelLeft, Play, Plus, Search, Settings2 } from "lucide-react";
+import { House, LayoutGrid, PanelLeft, Play, Plus, Search, Settings2 } from "lucide-react";
 import { forwardRef, useImperativeHandle, useRef, type ReactNode } from "react";
-import { displayName, type AISettings, type Cue } from "../api";
+import { displayName, shortcutOrder, type AISettings, type Cue } from "../api";
+import { usePrefs } from "../prefs";
 import { CueMark, IconButton } from "./ui";
 
 export type SidebarHandle = { focusSearch: () => void };
@@ -13,31 +14,61 @@ export const Sidebar = forwardRef<
   SidebarHandle,
   {
     cues: Cue[];
-    selected: "home" | string | null;
+    selected: "home" | "library" | string | null;
     query: string;
     ai: AISettings | null;
     starting: string | null;
     onQuery: (q: string) => void;
     onHome: () => void;
+    onLibrary: () => void;
     onSelect: (c: Cue) => void;
     onStart: (c: Cue) => void;
     onNewBlank: () => void;
     onSettings: () => void;
     onHide: () => void;
   }
->(function Sidebar({ cues, selected, query, ai, starting, onQuery, onHome, onSelect, onStart, onNewBlank, onSettings, onHide }, ref) {
+>(function Sidebar({ cues, selected, query, ai, starting, onQuery, onHome, onLibrary, onSelect, onStart, onNewBlank, onSettings, onHide }, ref) {
+  const { prefs } = usePrefs();
   const search = useRef<HTMLInputElement>(null);
   useImperativeHandle(ref, () => ({ focusSearch: () => search.current?.focus() }));
 
   const q = query.trim().toLowerCase();
+  const ordered = shortcutOrder(cues, prefs.pinned);
+  const shortcutOf = new Map(ordered.slice(0, 9).map((c, i) => [c.id, `⌘${i + 1}`]));
   const shown = q
-    ? cues.filter(
+    ? ordered.filter(
         (c) =>
           c.name.toLowerCase().includes(q) ||
           (c.description || "").toLowerCase().includes(q) ||
           c.resources.some((r) => displayName(r).toLowerCase().includes(q)),
       )
-    : cues;
+    : ordered;
+  const pinnedShown = shown.filter((c) => prefs.pinned.includes(c.id));
+  const restShown = shown.filter((c) => !prefs.pinned.includes(c.id));
+
+  const row = (c: Cue) => (
+    <Row key={c.id} active={selected === c.id} onClick={() => onSelect(c)}>
+      <span className="flex w-4 justify-center text-[14px] leading-none">{c.icon || "◌"}</span>
+      <span className="flex-1 truncate">{c.name}</span>
+      {shortcutOf.has(c.id) && starting !== c.id && (
+        <span className="text-[10.5px] text-faint group-hover:hidden">{shortcutOf.get(c.id)}</span>
+      )}
+      <button
+        aria-label={`Start ${c.name}`}
+        title={`Start Cue${shortcutOf.has(c.id) ? ` (${shortcutOf.get(c.id)})` : ""}`}
+        disabled={starting === c.id}
+        onClick={(e) => {
+          e.stopPropagation();
+          onStart(c);
+        }}
+        className={`size-5 items-center justify-center rounded-full text-red-text transition hover:bg-red-tint group-hover:flex ${
+          starting === c.id ? "flex" : "hidden"
+        }`}
+      >
+        {starting === c.id ? <CueMark size={12} thinking /> : <Play className="size-3 fill-current" />}
+      </button>
+    </Row>
+  );
 
   return (
     <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-hairline bg-[var(--sidebar)]" aria-label="Sidebar">
@@ -67,32 +98,26 @@ export const Sidebar = forwardRef<
           <House className="size-4 text-red-text" strokeWidth={1.9} />
           <span className="flex-1 truncate">Home</span>
         </Row>
+        <Row active={selected === "library"} onClick={onLibrary}>
+          <LayoutGrid className="size-4 text-red-text" strokeWidth={1.9} />
+          <span className="flex-1 truncate">Cues</span>
+          <span className="text-[11px] text-faint">{cues.length}</span>
+        </Row>
+
+        {pinnedShown.length > 0 && (
+          <>
+            <div className="mb-1 mt-5 pl-2.5 text-[11px] font-semibold text-faint">Pinned</div>
+            {pinnedShown.map(row)}
+          </>
+        )}
 
         <div className="mb-1 mt-5 flex items-center justify-between pl-2.5 pr-1">
-          <span className="text-[11px] font-semibold text-faint">Cues</span>
+          <span className="text-[11px] font-semibold text-faint">{pinnedShown.length > 0 ? "Other Cues" : "Your Cues"}</span>
           <IconButton label="New Blank Cue (⌥⌘N)" onClick={onNewBlank} className="size-6">
             <Plus className="size-3.5" />
           </IconButton>
         </div>
-
-        {shown.map((c) => (
-          <Row key={c.id} active={selected === c.id} onClick={() => onSelect(c)}>
-            <span className="flex w-4 justify-center text-[14px] leading-none">{c.icon || "◌"}</span>
-            <span className="flex-1 truncate">{c.name}</span>
-            <button
-              aria-label={`Start ${c.name}`}
-              title="Start Cue"
-              disabled={starting === c.id}
-              onClick={(e) => {
-                e.stopPropagation();
-                onStart(c);
-              }}
-              className="flex size-5 items-center justify-center rounded-full text-red-text opacity-0 transition hover:bg-red-tint focus:opacity-100 group-hover:opacity-100 disabled:opacity-100"
-            >
-              {starting === c.id ? <CueMark size={12} thinking /> : <Play className="size-3 fill-current" />}
-            </button>
-          </Row>
-        ))}
+        {restShown.map(row)}
         {cues.length === 0 && <p className="px-2.5 py-1 text-[12px] text-faint">No Cues yet</p>}
         {cues.length > 0 && shown.length === 0 && <p className="px-2.5 py-1 text-[12px] text-faint">No matches</p>}
       </nav>

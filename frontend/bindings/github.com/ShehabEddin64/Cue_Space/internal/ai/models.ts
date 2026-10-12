@@ -132,6 +132,45 @@ export class Proposal {
     }
 }
 
+/**
+ * Resolution is what Resolve returns: new resources plus questions for the
+ * ones the model couldn't complete.
+ */
+export class Resolution {
+    "resources": cue$0.Resource[];
+    "questions": { [_ in string]?: string };
+
+    /** Creates a new Resolution instance. */
+    constructor($$source: Partial<Resolution> = {}) {
+        if (!("resources" in $$source)) {
+            this["resources"] = [];
+        }
+        if (!("questions" in $$source)) {
+            this["questions"] = {};
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Resolution instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Resolution {
+        const $$createField0_0 = $$createType3;
+        const $$createField1_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("resources" in $$parsedSource) {
+            $$parsedSource["resources"] = $$createField0_0($$parsedSource["resources"]);
+        }
+        if ("questions" in $$parsedSource) {
+            $$parsedSource["questions"] = $$createField1_0($$parsedSource["questions"]);
+        }
+        return new Resolution($$parsedSource as Partial<Resolution>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = cue$0.Cue.createFrom;
 const $$createType1 = $Create.Map($Create.Any, $Create.Any);
+const $$createType2 = cue$0.Resource.createFrom;
+const $$createType3 = $Create.Array($$createType2);

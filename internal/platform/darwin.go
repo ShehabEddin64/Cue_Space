@@ -4,9 +4,21 @@ package platform
 
 /*
 #cgo CFLAGS: -x objective-c -fobjc-arc
-#cgo LDFLAGS: -framework Foundation
+#cgo LDFLAGS: -framework Foundation -framework AppKit
 #import <Foundation/Foundation.h>
+#import <AppKit/AppKit.h>
 #include <stdlib.h>
+
+// 0 follows the system, 1 is light, 2 is dark. Setting the app's appearance
+// also switches the web view's prefers-color-scheme, menus and panels.
+static void cs_set_appearance(int mode) {
+	dispatch_async(dispatch_get_main_queue(), ^{
+		NSAppearance *a = nil;
+		if (mode == 1) a = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+		if (mode == 2) a = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+		[NSApp setAppearance:a];
+	});
+}
 
 // Returns NULL on success, or an error message the caller must free.
 static char *cs_trash(const char *path) {
@@ -103,6 +115,19 @@ func cleanOpenError(msg string) string {
 		msg = msg[:i]
 	}
 	return msg
+}
+
+// SetAppearance switches the whole app to "light", "dark", or back to
+// following the system ("system" or anything else).
+func SetAppearance(mode string) {
+	switch mode {
+	case "light":
+		C.cs_set_appearance(1)
+	case "dark":
+		C.cs_set_appearance(2)
+	default:
+		C.cs_set_appearance(0)
+	}
 }
 
 // MoveToTrash moves path to the user's Trash, where it can be restored.

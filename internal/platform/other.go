@@ -17,6 +17,7 @@ func NewLauncher() *Launcher { return &Launcher{} }
 func (Launcher) OpenURL(context.Context, string) error               { return ErrUnsupported }
 func (Launcher) OpenApp(context.Context, cue.AppRef) error           { return ErrUnsupported }
 func (Launcher) OpenPath(context.Context, string, *cue.AppRef) error { return ErrUnsupported }
+func SetAppearance(string)                                           {}
 func Reveal(string) error                                            { return ErrUnsupported }
 func MoveToTrash(string) error                                       { return ErrUnsupported }
 func AppDirs() []string                                              { return nil }

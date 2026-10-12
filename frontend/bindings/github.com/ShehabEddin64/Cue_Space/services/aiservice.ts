@@ -34,6 +34,16 @@ export function Propose(description: string, base: cue$0.Cue | null): $Cancellab
 }
 
 /**
+ * Resolve asks the AI to turn phrases that couldn't be resolved locally into
+ * resources. It uses a much smaller prompt than Propose.
+ */
+export function Resolve(phrases: string[]): $CancellablePromise<ai$0.Resolution> {
+    return $Call.ByID(390529134, phrases).then(($result: any) => {
+        return $$createType2($result);
+    });
+}
+
+/**
  * SaveSettings stores the provider config. A non-empty apiKey replaces the
  * stored key; clearKey removes it.
  */
@@ -51,3 +61,4 @@ export function TestConnection(): $CancellablePromise<void> {
 // Private type creation functions
 const $$createType0 = $models.AISettings.createFrom;
 const $$createType1 = ai$0.Proposal.createFrom;
+const $$createType2 = ai$0.Resolution.createFrom;

@@ -33,8 +33,9 @@
   color-scheme: light;
 }
 
+/* Dark: when macOS is dark (unless Light is forced), or when Dark is forced. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --canvas: #111113;
     --surface: #1e1e21;
     --fill: #29292d;
@@ -55,6 +56,32 @@
     --shadow-composer: 0 0 0 1px rgb(255 255 255 / 0.05), 0 16px 48px rgb(0 0 0 / 0.35);
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --canvas: #111113;
+  --surface: #1e1e21;
+  --fill: #29292d;
+  --fill-strong: #333338;
+  --hairline: rgb(255 255 255 / 0.08);
+  --ink: #f3f3f4;
+  --graphite: #a1a1a6;
+  --faint: #6e6e73;
+  --red: #d93025;
+  --red-hover: #e5392e;
+  --red-text: #ff5a4e;
+  --red-on-tint: #ff7a70;
+  --red-tint: rgb(255 90 78 / 0.13);
+  --selected: rgb(255 255 255 / 0.08);
+  --sidebar: #18181a;
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.04);
+  --shadow-pop: 0 16px 48px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.07);
+  --shadow-composer: 0 0 0 1px rgb(255 255 255 / 0.05), 0 16px 48px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 @theme inline {

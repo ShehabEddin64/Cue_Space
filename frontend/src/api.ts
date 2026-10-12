@@ -2,8 +2,10 @@
 export {
   AIService,
   CueService,
+  PrefsService,
   SystemService,
 } from "../bindings/github.com/ShehabEddin64/Cue_Space/services";
+export { HomePrefs, HomeSection, Prefs } from "../bindings/github.com/ShehabEddin64/Cue_Space/internal/settings";
 export type { AISettings, Library } from "../bindings/github.com/ShehabEddin64/Cue_Space/services";
 export {
   AppRef,
@@ -85,4 +87,12 @@ export function normalizeURL(raw: string): string {
   if (/^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(url)) return "https://" + url;
   if (/^localhost(:\d+)?(\/\S*)?$/.test(url)) return "http://" + url;
   return url;
+}
+
+/** Pinned Cues first (in pinned order), then the rest by name. Matches the ⌘1–⌘9 order in the Cues menu. */
+export function shortcutOrder<T extends { id: string }>(cues: T[], pinned: string[]): T[] {
+  const byId = new Map(cues.map((c) => [c.id, c]));
+  const first = pinned.map((id) => byId.get(id)).filter((c): c is T => !!c);
+  const rest = cues.filter((c) => !pinned.includes(c.id));
+  return [...first, ...rest];
 }

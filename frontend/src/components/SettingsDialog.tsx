@@ -1,6 +1,7 @@
 import { Check, FolderOpen, KeyRound, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AIService, Config, disclosureSentence, errorMessage, SystemService, type AISettings } from "../api";
+import { AIService, Config, disclosureSentence, errorMessage, Prefs, SystemService, type AISettings } from "../api";
+import { usePrefs } from "../prefs";
 import { Button, Input, Label, Sheet } from "./ui";
 
 const presets = [
@@ -18,7 +19,14 @@ const providers: [Provider, string][] = [
   ["", "None"],
 ];
 
+const appearances: [string, string][] = [
+  ["system", "System"],
+  ["light", "Light"],
+  ["dark", "Dark"],
+];
+
 export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; onClose: () => void; onSaved: (s: AISettings) => void }) {
+  const { prefs, save: savePrefs } = usePrefs();
   const [loaded, setLoaded] = useState<AISettings | null>(null);
   const [provider, setProvider] = useState<Provider>("anthropic");
   const [model, setModel] = useState("");
@@ -134,6 +142,25 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
       }
     >
       <section>
+        <Label hint="System follows your Mac">Appearance</Label>
+        <div role="radiogroup" aria-label="Appearance" className="grid grid-cols-3 gap-1 rounded-full bg-fill p-1">
+          {appearances.map(([value, name]) => (
+            <button
+              key={value}
+              role="radio"
+              aria-checked={prefs.appearance === value}
+              onClick={() => savePrefs((p) => new Prefs({ ...p, appearance: value }))}
+              className={`h-7 rounded-full text-[12px] font-medium transition ${
+                prefs.appearance === value ? "bg-surface text-ink shadow-card" : "text-graphite hover:text-ink"
+              }`}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5">
         <Label>AI for describing Cues</Label>
         <div role="radiogroup" className="grid grid-cols-3 gap-1 rounded-full bg-fill p-1">
           {providers.map(([value, name]) => (

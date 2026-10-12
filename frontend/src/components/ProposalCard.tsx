@@ -12,6 +12,7 @@ import {
   type AISettings,
   type Proposal,
 } from "../api";
+import { applyEdit, parseCommand } from "../commands";
 import { AppPicker } from "./AppPicker";
 import { Button, CueMark, Input, TypeIcon } from "./ui";
 
@@ -51,7 +52,24 @@ export function ProposalCard({
 }) {
   const [problems, setProblems] = useState<string[]>([]);
   const [refineText, setRefineText] = useState("");
+  const [refineNote, setRefineNote] = useState("");
+  const [localBusy, setLocalBusy] = useState(false);
   const cue = proposal.cue;
+
+  // Commands (/add, /remove, /rename…) change the proposal on this Mac;
+  // anything else asks the AI to refine it.
+  const refine = async (text: string) => {
+    if (!parseCommand(text)) return onRefine(text);
+    setLocalBusy(true);
+    try {
+      const res = await applyEdit(cue, text, ai);
+      if (!res) return setRefineNote("That command doesn’t work here. Try /add, /remove, /off, /on, /rename or /icon.");
+      setRefineNote(res.message);
+      if (res.changed) onChange({ ...proposal, cue: res.cue, questions: { ...proposal.questions, ...res.questions } });
+    } finally {
+      setLocalBusy(false);
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => CueService.Problems(cue).then(setProblems), 200);
@@ -136,22 +154,24 @@ export function ProposalCard({
           value={refineText}
           onChange={(e) => setRefineText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && refineText.trim() && !refining) {
-              onRefine(refineText.trim());
+            if (e.key === "Enter" && refineText.trim() && !refining && !localBusy) {
+              refine(refineText.trim());
               setRefineText("");
             }
           }}
-          disabled={refining}
-          placeholder="Refine it, e.g. “add Figma and drop localhost”"
+          disabled={refining || localBusy}
+          placeholder="Refine: /add figma, /remove localhost, or describe a change"
           aria-label="Refine the proposal"
           className="h-9 flex-1 bg-transparent text-[13px] placeholder:text-faint focus:outline-none"
         />
-        {refining ? (
+        {refining || localBusy ? (
           <CueMark size={16} thinking />
         ) : (
           <CornerDownLeft className="size-3.5 text-faint" />
         )}
       </div>
+
+      {refineNote && <p className="-mt-2 mb-3 px-6 text-[12px] text-graphite">{refineNote}</p>}
 
       <footer className="flex flex-wrap items-center gap-2 border-t border-hairline bg-canvas/50 px-5 py-3.5">
         <Button variant="primary" onClick={onSave} disabled={blocked || refining} title={blocked ? problems.join("\n") : undefined}>

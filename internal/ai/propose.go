@@ -21,20 +21,35 @@ type draft struct {
 	Notes       string          `json:"notes"`
 }
 
+// Apps are named, not identified by bundle id: the model only sees app
+// names (fewer tokens) and Cue Space maps names to bundle ids itself.
 type draftResource struct {
-	Type             string  `json:"type"`
-	Label            string  `json:"label"`
-	URL              *string `json:"url"`
-	AppName          *string `json:"appName"`
-	AppBundleID      *string `json:"appBundleId"`
-	Path             *string `json:"path"`
-	OpenWithName     *string `json:"openWithName"`
-	OpenWithBundleID *string `json:"openWithBundleId"`
-	NeedsInput       *string `json:"needsInput"`
+	Type         string  `json:"type"`
+	Label        string  `json:"label"`
+	URL          *string `json:"url"`
+	AppName      *string `json:"appName"`
+	Path         *string `json:"path"`
+	OpenWithName *string `json:"openWithName"`
+	NeedsInput   *string `json:"needsInput"`
 }
 
 func nullableString(desc string) map[string]any {
 	return map[string]any{"anyOf": []any{map[string]any{"type": "string"}, map[string]any{"type": "null"}}, "description": desc}
+}
+
+var resourceSchema = map[string]any{
+	"type":                 "object",
+	"additionalProperties": false,
+	"required":             []string{"type", "label", "url", "appName", "path", "openWithName", "needsInput"},
+	"properties": map[string]any{
+		"type":         map[string]any{"type": "string", "enum": []string{"url", "app", "file", "folder"}},
+		"label":        map[string]any{"type": "string", "description": "What the user calls it, e.g. \"GitHub\" or \"Textbook\"."},
+		"url":          nullableString("For url: the full URL including scheme."),
+		"appName":      nullableString("For app: the exact name from the installed list."),
+		"path":         nullableString("For file/folder: an absolute path or one starting with ~/. Only if the user gave it."),
+		"openWithName": nullableString("For file/folder: the app to open it with, from the installed list."),
+		"needsInput":   nullableString("If a required detail is unknown (a path, a private URL), a short question for the user. Otherwise null."),
+	},
 }
 
 var draftSchema = map[string]any{
@@ -46,25 +61,7 @@ var draftSchema = map[string]any{
 		"icon":        map[string]any{"type": "string", "description": "One emoji."},
 		"description": map[string]any{"type": "string", "description": "One short sentence."},
 		"notes":       map[string]any{"type": "string", "description": "Anything the user should double-check, in one or two sentences. Empty if nothing."},
-		"resources": map[string]any{
-			"type": "array",
-			"items": map[string]any{
-				"type":                 "object",
-				"additionalProperties": false,
-				"required":             []string{"type", "label", "url", "appName", "appBundleId", "path", "openWithName", "openWithBundleId", "needsInput"},
-				"properties": map[string]any{
-					"type":             map[string]any{"type": "string", "enum": []string{"url", "app", "file", "folder"}},
-					"label":            map[string]any{"type": "string", "description": "What the user calls it, e.g. \"GitHub\" or \"Textbook\"."},
-					"url":              nullableString("For url: the full URL including scheme."),
-					"appName":          nullableString("For app: the app's name from the installed list."),
-					"appBundleId":      nullableString("For app: the bundle id from the installed list."),
-					"path":             nullableString("For file/folder: an absolute path or one starting with ~/. Only if the user gave it."),
-					"openWithName":     nullableString("For file/folder: the app to open it with, from the installed list."),
-					"openWithBundleId": nullableString("For file/folder: bundle id of the app to open it with."),
-					"needsInput":       nullableString("If a required detail is unknown (a path, a private URL), a short question for the user. Otherwise null."),
-				},
-			},
-		},
+		"resources":   map[string]any{"type": "array", "items": resourceSchema},
 	},
 }
 
@@ -77,7 +74,7 @@ A Cue is a saved context for one activity, such as working on a project or study
 - folder: a folder on disk, optionally opened with an app (a code project opened in an IDE is a folder with openWith set to the IDE)
 
 Rules:
-- Only use apps from the installed list below, with their exact name and bundle id. Map generic words to what is installed: "IDE" or "editor" means the code editor they have (Cursor, VS Code, Zed, Xcode, ...), "browser" means their browser, "Claude" means the Claude app if installed, otherwise https://claude.ai.
+- Only use apps from the installed list below, with their exact name. Map generic words to what is installed: "IDE" or "editor" means the code editor they have (Cursor, VS Code, Zed, Xcode, ...), "browser" means their browser, "Claude" means the Claude app if installed, otherwise https://claude.ai.
 - Never invent file or folder paths or private URLs such as a specific GitHub repository. If the user did not give one, keep the resource, leave path/url null, and put a short question in needsInput (for example "Where is the Atlas repository on your Mac?").
 - Well-known public sites are fine to fill in (https://github.com, https://claude.ai, https://docs.python.org). For localhost without a port, use http://localhost:3000 and mention it in notes.
 - Keep the order the user would want things to open in. Do not add resources the user did not ask for, unless they are clearly implied by the activity and you mention them in notes.
@@ -95,7 +92,7 @@ type Proposal struct {
 // set, the model edits that Cue instead of starting from scratch.
 func Propose(ctx context.Context, p Provider, description string, existing *cue.Cue, apps []platform.App) (Proposal, error) {
 	req := Request{
-		System:     systemPrompt + "\n\nInstalled apps (name — bundle id):\n" + appList(apps),
+		System:     systemPrompt + "\n\nInstalled apps: " + appList(apps),
 		User:       userPrompt(description, existing),
 		SchemaName: "cue_draft",
 		Schema:     draftSchema,
@@ -117,41 +114,62 @@ func Propose(ctx context.Context, p Provider, description string, existing *cue.
 	return prop, nil
 }
 
+// appList is a compact, comma-separated list of app names. Names are enough
+// for the model; bundle ids are filled in locally.
 func appList(apps []platform.App) string {
 	if len(apps) == 0 {
 		return "(unknown)"
 	}
-	var b strings.Builder
-	for _, a := range apps {
-		fmt.Fprintf(&b, "%s — %s\n", a.Name, a.BundleID)
+	names := make([]string, len(apps))
+	for i, a := range apps {
+		names[i] = a.Name
 	}
-	return b.String()
+	return strings.Join(names, ", ")
 }
 
 func userPrompt(description string, existing *cue.Cue) string {
 	if existing == nil {
 		return "Create a Cue for this:\n\n" + description
 	}
-	current, _ := json.MarshalIndent(struct {
-		Name        string         `json:"name"`
-		Icon        string         `json:"icon,omitempty"`
-		Description string         `json:"description,omitempty"`
-		Resources   []cue.Resource `json:"resources"`
-	}{existing.Name, existing.Icon, existing.Description, existing.Resources}, "", "  ")
-	return "Here is an existing Cue:\n\n" + string(current) +
-		"\n\nReturn the full updated Cue after applying this change, keeping everything else as it is:\n\n" + description
+	return "Current Cue:\n" + compactCue(*existing) +
+		"\nReturn the full updated Cue after this change, keeping everything else as it is:\n" + description
+}
+
+// compactCue describes a Cue in a few short lines rather than JSON.
+func compactCue(c cue.Cue) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s %s", c.Icon, c.Name)
+	if c.Description != "" {
+		fmt.Fprintf(&b, ": %s", c.Description)
+	}
+	b.WriteByte('\n')
+	for i, r := range c.Resources {
+		fmt.Fprintf(&b, "%d. %s %q", i+1, r.Type, r.DisplayName())
+		switch r.Type {
+		case cue.TypeURL:
+			fmt.Fprintf(&b, " %s", r.URL)
+		case cue.TypeApp:
+			if r.App != nil {
+				fmt.Fprintf(&b, " app=%s", r.App.Name)
+			}
+		case cue.TypeFile, cue.TypeFolder:
+			fmt.Fprintf(&b, " %s", r.Path)
+			if r.OpenWith != nil {
+				fmt.Fprintf(&b, " with=%s", r.OpenWith.Name)
+			}
+		}
+		if r.Disabled {
+			b.WriteString(" (off)")
+		}
+		b.WriteByte('\n')
+	}
+	return b.String()
 }
 
 func parseDraft(text string) (draft, error) {
 	var d draft
-	text = strings.TrimSpace(text)
 	// Some local models wrap JSON in a code fence despite the schema.
-	if strings.HasPrefix(text, "```") {
-		text = strings.TrimPrefix(text, "```json")
-		text = strings.TrimPrefix(text, "```")
-		text = strings.TrimSuffix(strings.TrimSpace(text), "```")
-	}
-	if err := json.Unmarshal([]byte(text), &d); err != nil {
+	if err := json.Unmarshal([]byte(stripFence(text)), &d); err != nil {
 		return d, fmt.Errorf("the model's answer was not a valid Cue: %w", err)
 	}
 	if strings.TrimSpace(d.Name) == "" {
@@ -177,15 +195,15 @@ func (d draft) toProposal(apps []platform.App) Proposal {
 		case cue.TypeURL:
 			r.URL = str(dr.URL)
 		case cue.TypeApp:
-			app, ok := resolveApp(apps, str(dr.AppBundleID), str(dr.AppName))
+			app, ok := resolveApp(apps, "", str(dr.AppName))
 			r.App = app
 			if !ok && question == "" {
 				question = fmt.Sprintf("%q doesn't seem to be installed. Pick an app or remove this item.", app.Name)
 			}
 		case cue.TypeFile, cue.TypeFolder:
 			r.Path = str(dr.Path)
-			if name, id := str(dr.OpenWithName), str(dr.OpenWithBundleID); name != "" || id != "" {
-				app, ok := resolveApp(apps, id, name)
+			if name := str(dr.OpenWithName); name != "" {
+				app, ok := resolveApp(apps, "", name)
 				r.OpenWith = app
 				if !ok && question == "" {
 					question = fmt.Sprintf("%q doesn't seem to be installed. Pick another app to open this with.", app.Name)
