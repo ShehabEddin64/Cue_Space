@@ -22,6 +22,17 @@
         <key>NSHighResolutionCapable</key>
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
-            <string>© 2026, My Company</string>
+            <string>© 2026, Cue Space contributors</string>
+        <key>CFBundleURLTypes</key>
+        <array>
+            <dict>
+                <key>CFBundleURLName</key>
+                <string>space.cue.app</string>
+                <key>CFBundleURLSchemes</key>
+                <array>
+                    <string>cuespace</string>
+                </array>
+            </dict>
+        </array>
     </dict>
 </plist>

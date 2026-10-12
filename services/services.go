@@ -32,6 +32,10 @@ const EventCuesChanged = "cues:changed"
 // "new-cue" or "start-cue".
 const EventMenu = "menu"
 
+// EventCueRan reports a Cue started from outside the window (the widget or a
+// cuespace:// link), so the frontend can show the run report.
+const EventCueRan = "cue:ran"
+
 func init() {
 	application.RegisterEvent[string](EventCuesChanged)
 	application.RegisterEvent[string](EventMenu)
@@ -257,6 +261,13 @@ func (s *AIService) SaveSettings(cfg ai.Config, apiKey string, clearKey bool) er
 	if cfg.Provider == ai.ProviderAnthropic && cfg.Model == "" {
 		cfg.Model = ai.DefaultAnthropicModel
 	}
+	if cfg.Provider == ai.ProviderGemini {
+		cfg.BaseURL = ""
+		if cfg.Model == "" {
+			cfg.Model = ai.DefaultGeminiModel
+		}
+		cfg.Model = strings.TrimPrefix(cfg.Model, "models/")
+	}
 	name := secrets.APIKeyName(cfg.Provider)
 	switch {
 	case clearKey:
@@ -282,6 +293,26 @@ func (s *AIService) provider() (ai.Provider, error) {
 		return nil, err
 	}
 	return ai.New(st.AI, key)
+}
+
+// ListModels lists the models a provider offers, using the settings being
+// edited (an empty apiKey falls back to the saved key for that provider).
+func (s *AIService) ListModels(ctx context.Context, cfg ai.Config, apiKey string) ([]string, error) {
+	if strings.TrimSpace(apiKey) == "" {
+		apiKey, _ = s.Secrets.Get(secrets.APIKeyName(cfg.Provider))
+	}
+	if cfg.Model == "" {
+		cfg.Model = "list" // any value; listing doesn't use it
+	}
+	p, err := ai.New(cfg, strings.TrimSpace(apiKey))
+	if err != nil {
+		return nil, err
+	}
+	models, err := p.Models(ctx)
+	if models == nil {
+		models = []string{}
+	}
+	return models, err
 }
 
 // TestConnection checks the saved provider, key and model.

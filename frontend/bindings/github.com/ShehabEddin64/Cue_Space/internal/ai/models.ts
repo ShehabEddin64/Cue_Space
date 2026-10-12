@@ -14,7 +14,7 @@ import * as cue$0 from "../cue/models.js";
  */
 export class Config {
     /**
-     * "anthropic" | "openai"
+     * "anthropic" | "gemini" | "openai"
      */
     "provider": string;
     "model": string;
@@ -63,6 +63,11 @@ export class Disclosure {
      * Local is true when requests never leave this Mac.
      */
     "local": boolean;
+
+    /**
+     * Note is anything else worth knowing about where requests go.
+     */
+    "note"?: string;
 
     /** Creates a new Disclosure instance. */
     constructor($$source: Partial<Disclosure> = {}) {

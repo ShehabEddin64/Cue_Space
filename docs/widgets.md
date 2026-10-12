@@ -1,79 +1,52 @@
-# Plan: macOS widgets and Shortcuts actions
+# Widgets and cuespace:// links
 
-Status: planned, not built. Real widgets need tools this project doesn't have yet. This page lists what they need and how they fit the current architecture, so they can be built when those are available.
+## What exists
 
-## What we want
+- **A desktop and Notification Center widget**, "Cues", in small, medium, large and extra-large sizes. It shows your Cues (pinned first, the same order as ⌘1–⌘9). Clicking one starts it.
+- **`cuespace://` links**, which also work from Shortcuts ("Open URL"), Raycast, Alfred or a browser:
+  - `cuespace://start/<cue-id>` starts a Cue
+  - `cuespace://open/<cue-id>` shows a Cue
+  - `cuespace://open` brings Cue Space forward
 
-- **Widgets** (desktop and Notification Center) that show your pinned Cues and start one with a click. Sizes: small (one Cue), medium (up to four), large (up to eight, with item counts).
-- **Shortcuts app actions**: "Start Cue" and "List Cues", so people can start a Cue from Shortcuts, Siri, Spotlight, Focus filters or automations.
-
-## Why this isn't built yet
-
-Both features use Apple frameworks that only native Swift code can use:
-
-| Feature | Framework | Needs |
-| --- | --- | --- |
-| Widgets | WidgetKit (SwiftUI) | A widget **app extension** (`.appex`) inside the app bundle |
-| Shortcuts actions | App Intents | Swift intents compiled into the app or an extension |
-
-Building and shipping them requires:
-
-1. **Full Xcode** (not only the command line tools) for the WidgetKit and App Intents SDKs, `actool`, and extension targets. This also lets the Icon Composer icon in `build/appicon.icon` compile into `Assets.car`.
-2. **An Apple Developer account** for a Team ID. Widget extensions must be sandboxed and signed, and sharing data between the app and the widget needs an **App Group** (`group.space.cue.app`), which is tied to the Team ID.
-3. **Developer ID signing and notarization** to distribute outside the Mac App Store. Ad-hoc signed builds don't load widgets reliably.
-
-## Architecture
-
-The rule "the runner never talks to the AI" stays. Widgets and intents only list and start Cues.
+The widget never runs anything itself. The rule "only the runner opens things" holds:
 
 ```
-┌────────────── Cue Space.app (Wails, Go) ──────────────┐
-│  store ──writes──▶ App Group container                 │
-│                    widget-snapshot.json                │
-│  URL handler  ◀── cuespace://start/<cue-id>            │
-│  runner (unchanged)                                    │
-│  ┌──────── CueSpaceWidgets.appex (Swift) ──────────┐   │
-│  │ reads widget-snapshot.json → SwiftUI timeline   │   │
-│  │ button → opens cuespace://start/<cue-id>        │   │
-│  │ AppIntents: StartCueIntent, ListCuesIntent      │   │
-│  └─────────────────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────┘
+Cue Space.app (Go)
+ ├─ writes ~/Library/Application Support/CueSpace/widget.json   (names, icons, counts: no paths or URLs)
+ ├─ runs Contents/MacOS/cuespace-widget-reload                   (asks WidgetKit to refresh)
+ ├─ handles cuespace://start/<id>  →  the same runner as Start Cue
+ └─ Contents/PlugIns/CueSpaceWidgets.appex (Swift, sandboxed)
+      reads widget.json  →  SwiftUI views  →  each Cue links to cuespace://start/<id>
 ```
 
-### 1. A snapshot the widget can read (Go)
+## Files
 
-- After every Cue change (the store watcher already fires) and every pin change, write `widget-snapshot.json` to the App Group container: `~/Library/Group Containers/group.space.cue.app/`.
-- Contents: the `ShortcutOrder` list (pinned first) of `{id, name, icon, itemCount, lastRunAt}`. No paths or URLs, so the widget never sees what a Cue opens.
-- Then ask WidgetKit to reload timelines. From Go, call a tiny Objective-C helper (`WidgetCenter` has no Objective-C API, so the helper goes in the Swift extension target or in a small Swift static library linked into the app).
+| File | What it is |
+| --- | --- |
+| `widgets/CueSpaceWidgets.swift` | The widget: timeline provider, views, brand mark |
+| `widgets/reload.swift` | Tiny helper that calls `WidgetCenter.reloadAllTimelines()` (no C or Objective-C API exists) |
+| `build/darwin/widgets/build.sh` | Compiles both with `swiftc` for arm64 and x86_64 and puts them in the app bundle |
+| `build/darwin/widgets/Info.plist` | The extension's bundle info (`com.apple.widgetkit-extension`) |
+| `build/darwin/widgets/widgets.entitlements` | Sandbox, plus read-only access to `~/Library/Application Support/CueSpace/` |
+| `services/widget.go` | Writes the snapshot (debounced) when Cues or pins change |
 
-### 2. A URL scheme the widget can call (Go)
+`wails3 task darwin:package` builds everything. It needs only the Xcode command line tools, not full Xcode. Signing goes inside-out: the helper, then the extension with its entitlements, then the app (no `--deep`, which would strip the extension's sandbox entitlements).
 
-- Register `cuespace://` in `build/darwin/Info.plist` (`CFBundleURLTypes`).
-- Handle `cuespace://start/<id>` and `cuespace://open/<id>` with Wails' application URL event, and run the same `CueService.Start` the UI uses.
-- This also gives Raycast, Alfred and Shortcuts' "Open URL" action a way to start Cues before the native actions exist.
+## Notes and limits
 
-### 3. The widget extension (Swift)
+- **Data sharing without an App Group.** App Groups need an Apple Developer Team ID. Instead, the sandboxed extension has a read-only exception for the Cue Space data folder. That's fine outside the Mac App Store; an App Store build would switch to an App Group container.
+- **Development builds.** The app is ad-hoc signed. If the widget doesn't appear in the gallery after a rebuild, register the extension again:
 
-- New Xcode target `CueSpaceWidgets` (Widget Extension), with the App Group entitlement and sandboxing.
-- A `TimelineProvider` reads the snapshot. Entries refresh when the app reloads timelines, with a fallback refresh every hour.
-- Views follow the identity: Cue Red only on the start control, Geist is not available in widgets so they use the system font, and light and dark come from the system.
-- Every Cue is a `Link(destination: cuespace://start/<id>)`. On macOS 14 and later, an `AppIntent` button can start the Cue without bringing the app to the front.
+  ```bash
+  pluginkit -a bin/cuespace.app/Contents/PlugIns/CueSpaceWidgets.appex
+  ```
 
-### 4. Shortcuts actions (Swift, App Intents)
+  Moving the app to `/Applications` makes registration automatic.
+- **`CUESPACE_DIR`.** The widget always reads the real data folder, so it shows your real Cues even when the app is pointed at a test folder.
+- **Clicking brings Cue Space forward.** A widget link opens the app, which then starts the Cue and shows the run report.
 
-- `StartCueIntent(cue: CueEntity)` and `ListCuesIntent`, with `CueEntity` backed by the snapshot.
-- `StartCueIntent.perform()` opens `cuespace://start/<id>`, so the Go runner stays the only code that opens things.
-- Add `AppShortcutsProvider` phrases: "Start \(cue) in Cue Space".
+## Still to do
 
-### 5. Build integration
-
-- Keep Wails building the Go binary. Add an Xcode project under `build/darwin/xcode/` that builds the `.appex`. A Taskfile step copies it into `Cue Space.app/Contents/PlugIns/` before signing.
-- Sign inside-out: extension first, then the app, with the App Group entitlement on both. Then notarize.
-
-## Order of work
-
-1. URL scheme and handler (Go only). Useful on its own for Raycast, Alfred and Shortcuts "Open URL".
-2. App Group snapshot writer (Go), behind a check that the container exists.
-3. Widget extension (Xcode and Developer ID needed from here on).
-4. App Intents.
-5. Signing and notarization in CI.
+- **Shortcuts-app actions** (App Intents: "Start Cue", "List Cues") with Siri and Spotlight phrases. Until then, Shortcuts can use "Open URL" with `cuespace://start/<id>`.
+- **Start without bringing the app forward**, using an App Intent button (macOS 14+) that hands the Cue id to the app in the background.
+- **Developer ID signing and notarization** for distribution, and an App Group once a Team ID exists.

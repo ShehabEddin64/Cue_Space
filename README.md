@@ -27,7 +27,7 @@ Cue Space proposes the Cue using the apps you actually have installed. You revie
 - **Activities, not apps.** Organize around what you want to do.
 - **Simplicity above automation.** Making a Cue should feel like making a playlist, not programming a workflow.
 - **AI creates. Cue Space executes.** AI helps write Cues. Starting a Cue never calls an AI: it is deterministic and works offline.
-- **Bring your own AI.** Anthropic, or any OpenAI-compatible server, including local models in Ollama or LM Studio. Optional.
+- **Bring your own AI.** Google Gemini (which has a free tier), Anthropic, or any OpenAI-compatible server, including local models in Ollama or LM Studio. Optional.
 - **Local first.** No account and no cloud. Your Cues are plain files you own.
 - **Predictability over magic.** You stay in control of what your Cues do.
 
@@ -49,7 +49,9 @@ AI requests are kept small: the model sees app names only (bundle ids are filled
 
 Keyboard: your first nine Cues get **⌘1–⌘9** (pinned first). The Cues menu lists them. Press ⌘/ to see every shortcut.
 
-Widgets and Shortcuts-app actions need a native Swift extension. See [docs/widgets.md](docs/widgets.md).
+**Desktop layouts.** A Cue can place its windows on desktops (macOS Spaces): an app in full screen on its own desktop, two apps side by side on a new desktop, quarters, thirds and more, with numbered slots and a Mission Control-style preview. Needs Accessibility permission. Creating new desktops automates Mission Control; if that fails, the layout is arranged on the current desktop and the run report says so.
+
+**Widget and links.** A "Cues" widget for the desktop and Notification Center starts a Cue in one click, and `cuespace://start/<id>` links work from Shortcuts, Raycast or Alfred. See [docs/widgets.md](docs/widgets.md).
 
 ## Your Cues are files
 
@@ -123,7 +125,7 @@ internal/cue         the Cue model, validation (JSON Schema + rules)
 internal/store       one .cue.json per Cue, atomic writes, folder watcher
 internal/runner      starts a Cue: opens enabled resources in order, reports each step
 internal/platform    the only OS-specific code: `open`, installed-app scan, Trash (macOS)
-internal/ai          providers (Anthropic, OpenAI-compatible) and the Cue proposal prompt
+internal/ai          providers (Anthropic, Gemini, OpenAI-compatible) and the Cue proposal prompt
 internal/settings    settings.json (provider, model, base URL)
 internal/secrets     Keychain access
 services/            the thin layer bound to the frontend (TypeScript bindings are generated)

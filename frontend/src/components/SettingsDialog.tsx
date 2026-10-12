@@ -1,4 +1,5 @@
-import { Check, FolderOpen, KeyRound, Lock } from "lucide-react";
+import { Browser } from "@wailsio/runtime";
+import { Check, ExternalLink, FolderOpen, KeyRound, Lock, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AIService, Config, disclosureSentence, errorMessage, Prefs, SystemService, type AISettings } from "../api";
 import { usePrefs } from "../prefs";
@@ -11,13 +12,17 @@ const presets = [
   { name: "LM Studio", url: "http://localhost:1234/v1", key: false },
 ];
 
-type Provider = "" | "anthropic" | "openai";
+type Provider = "" | "anthropic" | "gemini" | "openai";
 
 const providers: [Provider, string][] = [
   ["anthropic", "Anthropic"],
+  ["gemini", "Gemini"],
   ["openai", "OpenAI-compatible"],
   ["", "None"],
 ];
+
+const defaultModel: Record<string, string> = { anthropic: "claude-opus-5-5", gemini: "gemini-2.5-flash", openai: "" };
+const GEMINI_KEY_URL = "https://aistudio.google.com/apikey";
 
 const appearances: [string, string][] = [
   ["system", "System"],
@@ -34,13 +39,16 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
   const [key, setKey] = useState("");
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState<"save" | "test" | null>(null);
+  const [models, setModels] = useState<string[]>([]);
+  const [modelsBusy, setModelsBusy] = useState(false);
+  const [modelsError, setModelsError] = useState("");
 
   useEffect(() => {
     AIService.GetSettings().then((s) => {
       setLoaded(s);
       const p = (s.config.provider || "anthropic") as Provider;
       setProvider(p);
-      setModel(s.config.model || (p === "anthropic" ? "claude-opus-5-5" : ""));
+      setModel(s.config.model || defaultModel[p] || "");
       setBaseUrl(s.config.baseUrl);
     });
   }, []);
@@ -49,9 +57,11 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
     setProvider(p);
     setStatus(null);
     setKey("");
+    setModels([]);
+    setModelsError("");
     const same = loaded?.config.provider === p;
-    if (p === "anthropic") {
-      setModel(same ? loaded!.config.model : "claude-opus-5-5");
+    if (p === "anthropic" || p === "gemini") {
+      setModel(same ? loaded!.config.model : defaultModel[p]);
       setBaseUrl("");
     } else if (p === "openai") {
       setModel(same ? loaded!.config.model : "");
@@ -95,6 +105,22 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
     }
   };
 
+  // Ask the provider which models this key can use, so nobody has to guess ids.
+  const loadModels = async () => {
+    setModelsBusy(true);
+    setModelsError("");
+    try {
+      const list = await AIService.ListModels(new Config({ provider, model, baseUrl }), key);
+      setModels(list);
+      if (!list.length) setModelsError("No models found.");
+    } catch (e) {
+      setModels([]);
+      setModelsError(errorMessage(e));
+    } finally {
+      setModelsBusy(false);
+    }
+  };
+
   const removeKey = async () => {
     await AIService.SaveSettings(new Config({ provider, model, baseUrl }), "", true);
     const s = await AIService.GetSettings();
@@ -104,15 +130,22 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
 
   const hasKey = loaded?.hasKey && loaded.config.provider === provider;
   const preset = presets.find((p) => p.url === baseUrl);
-  const needsKey = provider === "anthropic" || (provider === "openai" && (preset?.key ?? true));
+  const needsKey = provider === "anthropic" || provider === "gemini" || (provider === "openai" && (preset?.key ?? true));
+  const canList = provider !== "" && (!needsKey || hasKey || key.trim() !== "") && (provider !== "openai" || baseUrl !== "");
   const local = provider === "openai" && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])/.test(baseUrl);
   const where =
     provider === ""
       ? ""
       : disclosureSentence({
           model: model || "your model",
-          vendor: provider === "anthropic" ? "Anthropic" : (preset?.name ?? baseUrl.replace(/^https?:\/\//, "").split("/")[0]),
+          vendor:
+            provider === "anthropic"
+              ? "Anthropic"
+              : provider === "gemini"
+                ? "Google"
+                : (preset?.name ?? baseUrl.replace(/^https?:\/\//, "").split("/")[0]),
           local,
+          note: provider === "gemini" ? "On Google’s free tier, Google may use your requests to improve its products." : undefined,
         });
 
   return (
@@ -162,7 +195,7 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
 
       <section className="mt-5">
         <Label>AI for describing Cues</Label>
-        <div role="radiogroup" className="grid grid-cols-3 gap-1 rounded-full bg-fill p-1">
+        <div role="radiogroup" className="grid grid-cols-4 gap-1 rounded-full bg-fill p-1">
           {providers.map(([value, name]) => (
             <button
               key={value || "none"}
@@ -199,10 +232,43 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
         </section>
       )}
 
+      {provider === "gemini" && (
+        <p className="mt-3 text-[12px] leading-relaxed text-graphite">
+          Gemini has a free tier. Get an API key in Google AI Studio, paste it below, then load the models your key can use.{" "}
+          <button onClick={() => Browser.OpenURL(GEMINI_KEY_URL)} className="inline-flex items-center gap-1 font-medium text-red-text hover:underline">
+            Get a free key
+            <ExternalLink className="size-3" />
+          </button>
+        </p>
+      )}
+
       {provider && (
         <section className="mt-5">
-          <Label hint={provider === "anthropic" ? "Default: claude-opus-5-5" : "e.g. gpt-5, llama3.2, qwen3"}>Model</Label>
-          <Input value={model} onChange={(e) => setModel(e.target.value)} className="font-mono text-xs" />
+          <Label hint={defaultModel[provider] ? `Default: ${defaultModel[provider]}` : "e.g. gpt-5, llama3.2, qwen3"}>Model</Label>
+          <div className="flex gap-1.5">
+            {models.length > 0 ? (
+              <select
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                aria-label="Model"
+                className="h-8 min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-2 font-mono text-xs focus:border-red-text/60 focus:outline-none"
+              >
+                {!models.includes(model) && model && <option value={model}>{model}</option>}
+                {models.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input value={model} onChange={(e) => setModel(e.target.value)} className="font-mono text-xs" />
+            )}
+            <Button onClick={loadModels} busy={modelsBusy} disabled={!canList} title={canList ? "Load the models this key can use" : "Add your API key first"}>
+              {!modelsBusy && <RefreshCw className="size-3.5" />}
+              Load Models
+            </Button>
+          </div>
+          {modelsError && <p className="mt-1.5 text-[11.5px] text-red-text">{modelsError}</p>}
         </section>
       )}
 
@@ -216,7 +282,9 @@ export function SettingsDialog({ folder, onClose, onSaved }: { folder: string; o
                 type="password"
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
-                placeholder={hasKey ? "Leave empty to keep the saved key" : provider === "anthropic" ? "sk-ant-…" : "sk-…"}
+                placeholder={
+                  hasKey ? "Leave empty to keep the saved key" : provider === "anthropic" ? "sk-ant-…" : provider === "gemini" ? "AIza…" : "sk-…"
+                }
                 className="pl-8 font-mono text-xs"
               />
             </div>

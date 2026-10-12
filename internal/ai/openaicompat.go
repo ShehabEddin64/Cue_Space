@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -38,21 +39,23 @@ type chatMessage struct {
 	Content string `json:"content"`
 }
 
+// Complete asks for JSON matching req.Schema. Servers differ in how much of
+// OpenAI's structured output they support, so it steps down: a strict JSON
+// schema, then plain JSON mode with the schema in the prompt, then no
+// response format at all (the answer is still parsed as JSON).
 func (o *OpenAICompat) Complete(ctx context.Context, req Request) (string, error) {
-	body := map[string]any{
-		"model": o.model,
-		"messages": []chatMessage{
-			{Role: "system", Content: req.System},
-			{Role: "user", Content: req.User},
-		},
-		"response_format": map[string]any{
-			"type": "json_schema",
-			"json_schema": map[string]any{
-				"name":   req.SchemaName,
-				"strict": true,
-				"schema": req.Schema,
-			},
-		},
+	schemaText, _ := json.Marshal(req.Schema)
+	withSchemaInPrompt := req.System + "\n\nAnswer with only a JSON object that matches this JSON Schema:\n" + string(schemaText)
+	attempts := []struct {
+		system string
+		format map[string]any
+	}{
+		{req.System, map[string]any{
+			"type":        "json_schema",
+			"json_schema": map[string]any{"name": req.SchemaName, "strict": true, "schema": req.Schema},
+		}},
+		{withSchemaInPrompt, map[string]any{"type": "json_object"}},
+		{withSchemaInPrompt, nil},
 	}
 	var resp struct {
 		Choices []struct {
@@ -60,7 +63,25 @@ func (o *OpenAICompat) Complete(ctx context.Context, req Request) (string, error
 			FinishReason string      `json:"finish_reason"`
 		} `json:"choices"`
 	}
-	if err := o.do(ctx, http.MethodPost, "/chat/completions", body, &resp); err != nil {
+	var err error
+	for _, a := range attempts {
+		body := map[string]any{
+			"model": o.model,
+			"messages": []chatMessage{
+				{Role: "system", Content: a.system},
+				{Role: "user", Content: req.User},
+			},
+		}
+		if a.format != nil {
+			body["response_format"] = a.format
+		}
+		err = o.do(ctx, http.MethodPost, "/chat/completions", body, &resp)
+		var bad *badRequest
+		if !errors.As(err, &bad) {
+			break // success, or a failure a simpler request won't fix
+		}
+	}
+	if err != nil {
 		return "", err
 	}
 	if len(resp.Choices) == 0 {
@@ -83,7 +104,8 @@ func (o *OpenAICompat) Check(ctx context.Context) error {
 		return err
 	}
 	for _, m := range resp.Data {
-		if m.ID == o.model {
+		// Gemini lists ids as "models/gemini-…".
+		if m.ID == o.model || strings.TrimPrefix(m.ID, "models/") == strings.TrimPrefix(o.model, "models/") {
 			return nil
 		}
 	}
@@ -92,6 +114,45 @@ func (o *OpenAICompat) Check(ctx context.Context) error {
 	}
 	return nil
 }
+
+// Models lists the server's models. For Gemini, only text models that can
+// chat are kept.
+func (o *OpenAICompat) Models(ctx context.Context) ([]string, error) {
+	var resp struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := o.do(ctx, http.MethodGet, "/models", nil, &resp); err != nil {
+		return nil, err
+	}
+	gemini := strings.Contains(o.baseURL, "generativelanguage.googleapis.com")
+	var ids []string
+	for _, m := range resp.Data {
+		id := strings.TrimPrefix(m.ID, "models/")
+		if gemini && (!strings.HasPrefix(id, "gemini") || containsAny(id, "embedding", "image", "tts", "audio", "live", "veo", "imagen", "computer")) {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids, nil
+}
+
+func containsAny(s string, parts ...string) bool {
+	for _, p := range parts {
+		if strings.Contains(s, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// badRequest is a 400/404/422 answer: the server didn't accept the request
+// as sent, so a simpler request may work.
+type badRequest struct{ msg string }
+
+func (e *badRequest) Error() string { return e.msg }
 
 func (o *OpenAICompat) do(ctx context.Context, method, path string, in, out any) error {
 	var body io.Reader
@@ -126,7 +187,16 @@ func (o *OpenAICompat) do(ctx context.Context, method, path string, in, out any)
 		return err
 	}
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("%s returned %d: %s", o.baseURL, resp.StatusCode, apiErrorMessage(data))
+		msg := fmt.Sprintf("%s returned %d: %s", o.baseURL, resp.StatusCode, apiErrorMessage(data))
+		switch resp.StatusCode {
+		case http.StatusBadRequest, http.StatusUnprocessableEntity:
+			return &badRequest{msg}
+		case http.StatusUnauthorized, http.StatusForbidden:
+			return fmt.Errorf("the server rejected the API key (%d): %s", resp.StatusCode, apiErrorMessage(data))
+		case http.StatusTooManyRequests:
+			return fmt.Errorf("rate limited; free tiers allow only a few requests per minute. Try again shortly")
+		}
+		return errors.New(msg)
 	}
 	return json.Unmarshal(data, out)
 }

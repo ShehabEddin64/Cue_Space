@@ -73,10 +73,11 @@ export function timeAgo(iso?: string): string {
 }
 
 /** Where AI requests go, in one honest sentence. */
-export function disclosureSentence(d: { model: string; vendor: string; local: boolean }): string {
+export function disclosureSentence(d: { model: string; vendor: string; local: boolean; note?: string }): string {
   if (!d.model && !d.vendor) return "";
   if (d.local) return `Runs on this Mac with ${d.model}${d.vendor ? ` in ${d.vendor}` : ""}. Nothing leaves your Mac.`;
-  return `Your description and the names of apps on this Mac are sent to ${d.vendor} (${d.model}). Cue Space has no servers.`;
+  const base = `Your description and the names of apps on this Mac are sent to ${d.vendor} (${d.model}). Cue Space has no servers.`;
+  return d.note ? `${base} ${d.note}` : base;
 }
 
 /** Examples that show what describing a Cue can do. */

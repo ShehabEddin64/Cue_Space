@@ -43,7 +43,8 @@ func (f *fakeProvider) Complete(_ context.Context, r Request) (string, error) {
 	f.got = r
 	return f.answer, nil
 }
-func (f *fakeProvider) Check(context.Context) error { return nil }
+func (f *fakeProvider) Check(context.Context) error              { return nil }
+func (f *fakeProvider) Models(context.Context) ([]string, error) { return nil, nil }
 
 func TestProposeAtlas(t *testing.T) {
 	p := &fakeProvider{answer: atlasAnswer}
@@ -205,6 +206,7 @@ func TestNewValidatesConfig(t *testing.T) {
 	cases := []Config{
 		{},
 		{Provider: ProviderAnthropic},
+		{Provider: ProviderGemini},
 		{Provider: ProviderOpenAI, Model: "x"},
 		{Provider: ProviderOpenAI, BaseURL: "http://localhost:11434/v1"},
 		{Provider: "other"},
@@ -238,6 +240,7 @@ func TestDescribe(t *testing.T) {
 		{Config{Provider: ProviderOpenAI, Model: "qwen3", BaseURL: "http://127.0.0.1:1234/v1"}, Disclosure{Model: "qwen3", Vendor: "LM Studio", Local: true}},
 		{Config{Provider: ProviderOpenAI, Model: "gpt-5", BaseURL: "https://api.openai.com/v1"}, Disclosure{Model: "gpt-5", Vendor: "OpenAI"}},
 		{Config{Provider: ProviderOpenAI, Model: "x", BaseURL: "https://llm.example.com/v1"}, Disclosure{Model: "x", Vendor: "llm.example.com"}},
+		{Config{Provider: ProviderGemini}, Disclosure{Model: "Gemini 2.5 Flash", Vendor: "Google", Note: "On Google’s free tier, Google may use your requests to improve its products."}},
 		{Config{}, Disclosure{}},
 	}
 	for _, c := range cases {
@@ -285,5 +288,67 @@ func TestProposeEditKeepsLayout(t *testing.T) {
 	}
 	if prop.Cue.Layout == nil || prop.Cue.Layout.Desktops[0].Slots[0] != "calc" {
 		t.Errorf("layout lost: %+v", prop.Cue.Layout)
+	}
+}
+
+// A Gemini-like server: rejects json_schema, accepts json_object, lists
+// models with a "models/" prefix.
+func TestOpenAICompatFallsBackToJSONMode(t *testing.T) {
+	var formats []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/models":
+			io.WriteString(w, `{"data":[{"id":"models/gemini-2.5-flash"},{"id":"models/gemini-embedding-001"},{"id":"models/imagen-4"},{"id":"models/gemini-3-flash"}]}`)
+		case "/chat/completions":
+			var body map[string]any
+			json.NewDecoder(r.Body).Decode(&body)
+			rf, _ := body["response_format"].(map[string]any)
+			format, _ := rf["type"].(string)
+			formats = append(formats, format)
+			if format == "json_schema" {
+				w.WriteHeader(400)
+				io.WriteString(w, `{"error":{"message":"Invalid JSON payload: unknown field additionalProperties"}}`)
+				return
+			}
+			msgs := body["messages"].([]any)
+			if sys := msgs[0].(map[string]any)["content"].(string); !strings.Contains(sys, "JSON Schema") {
+				t.Error("fallback should put the schema in the prompt")
+			}
+			json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{
+				"message": map[string]any{"role": "assistant", "content": "```json\n" + atlasAnswer + "\n```"}, "finish_reason": "stop",
+			}}})
+		}
+	}))
+	defer srv.Close()
+
+	p := NewOpenAICompat(srv.URL, "key", "gemini-2.5-flash")
+	if err := p.Check(context.Background()); err != nil {
+		t.Errorf("Check with models/ prefix: %v", err)
+	}
+	prop, err := Propose(context.Background(), p, "atlas", nil, installed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prop.Cue.Name != "Atlas" || strings.Join(formats, ",") != "json_schema,json_object" {
+		t.Errorf("name %q, formats %q", prop.Cue.Name, formats)
+	}
+
+	// A generic server's models are listed as they are (minus "models/").
+	ids, err := p.Models(context.Background())
+	if err != nil || len(ids) != 4 || ids[0] != "gemini-2.5-flash" {
+		t.Errorf("generic Models = %q, %v", ids, err)
+	}
+}
+
+func TestGeminiModelFilter(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"data":[{"id":"models/gemini-2.5-flash"},{"id":"models/gemini-embedding-001"},{"id":"models/imagen-4"},{"id":"models/gemini-3-flash"},{"id":"models/gemini-2.5-flash-preview-tts"}]}`)
+	}))
+	defer srv.Close()
+	// Route the Gemini host to the test server.
+	p := NewOpenAICompat(srv.URL+"/generativelanguage.googleapis.com", "k", "m")
+	ids, err := p.Models(context.Background())
+	if err != nil || strings.Join(ids, ",") != "gemini-2.5-flash,gemini-3-flash" {
+		t.Errorf("Gemini Models = %q, %v", ids, err)
 	}
 }

@@ -11,6 +11,7 @@ import {
   type AISettings,
   type Library as LibraryData,
   type Proposal,
+  type Result,
 } from "./api";
 import { CueDetail } from "./components/CueDetail";
 import { CustomizeHome } from "./components/CustomizeHome";
@@ -153,6 +154,9 @@ function Shell() {
       const c = cues.find((x) => x.id === action.slice(6));
       return c && void start(c);
     }
+    if (action.startsWith("open:")) {
+      return setView({ kind: "cue", id: action.slice(5) });
+    }
     switch (action) {
       case "settings":
         return setSheet("settings");
@@ -189,6 +193,17 @@ function Shell() {
     }
   };
   useEffect(() => Events.On("menu", (e: { data: string }) => onMenu.current(e.data)), []);
+
+  // A Cue started from the widget or a cuespace:// link: show its report.
+  useEffect(
+    () =>
+      Events.On("cue:ran", (e: { data: { cueId: string; cueName: string; result: Result; error?: string } }) => {
+        const d = e.data;
+        setReport(d.error ? { cueId: d.cueId, cueName: d.cueName, error: d.error } : { cueId: d.cueId, cueName: d.cueName, result: d.result });
+        reload();
+      }),
+    [reload],
+  );
 
   const onAISaved = (s: AISettings) => {
     setAI(s);

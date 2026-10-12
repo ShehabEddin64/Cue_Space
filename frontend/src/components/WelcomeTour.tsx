@@ -53,7 +53,7 @@ const steps: Step[] = [
           <span className="text-[13px] text-ink">Study math: my textbook, notes folder and Calculator</span>
         </div>
         <div className="mt-3 flex items-center justify-between text-[11px] text-graphite">
-          <span>Your AI · Anthropic, OpenAI or local</span>
+          <span>Your AI · Gemini, Anthropic, OpenAI or local</span>
           <span className="flex size-6 items-center justify-center rounded-full bg-red text-white">
             <ArrowUp className="size-3.5" strokeWidth={2.5} />
           </span>

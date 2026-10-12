@@ -72,6 +72,18 @@ func (a *Anthropic) Check(ctx context.Context) error {
 	return nil
 }
 
+func (a *Anthropic) Models(ctx context.Context) ([]string, error) {
+	var ids []string
+	pager := a.client.Models.ListAutoPaging(ctx, anthropic.ModelListParams{})
+	for pager.Next() {
+		ids = append(ids, pager.Current().ID)
+	}
+	if err := pager.Err(); err != nil {
+		return nil, describeAnthropicError(err)
+	}
+	return ids, nil
+}
+
 func describeAnthropicError(err error) error {
 	var apiErr *anthropic.Error
 	if errors.As(err, &apiErr) {

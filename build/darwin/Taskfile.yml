@@ -171,6 +171,7 @@ tasks:
         fi
       - cp "{{.BIN_DIR}}/{{.APP_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS"
       - cp build/darwin/Info.plist "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents"
+      - '{{if eq OS "darwin"}}sh build/darwin/widgets/build.sh "{{.BIN_DIR}}/{{.APP_NAME}}.app"{{else}}echo "Skipping widgets"{{end}}'
       - task: '{{if eq OS "darwin"}}codesign:adhoc{{else}}codesign:skip{{end}}'
 
   codesign:adhoc:
@@ -178,7 +179,17 @@ tasks:
     internal: true
     cmds:
       - xattr -cr "{{.BIN_DIR}}/{{.APP_NAME}}.app"
-      - codesign --force --deep --sign - "{{.BIN_DIR}}/{{.APP_NAME}}.app"
+      # Sign inside-out: the widget extension keeps its own sandbox
+      # entitlements, so the app is signed afterwards without --deep.
+      - |
+        APP="{{.BIN_DIR}}/{{.APP_NAME}}.app"
+        if [ -f "$APP/Contents/MacOS/cuespace-widget-reload" ]; then
+          codesign --force --sign - "$APP/Contents/MacOS/cuespace-widget-reload"
+        fi
+        if [ -d "$APP/Contents/PlugIns/CueSpaceWidgets.appex" ]; then
+          codesign --force --sign - --entitlements build/darwin/widgets/widgets.entitlements "$APP/Contents/PlugIns/CueSpaceWidgets.appex"
+        fi
+      - codesign --force --sign - "{{.BIN_DIR}}/{{.APP_NAME}}.app"
       - codesign --verify --deep --strict "{{.BIN_DIR}}/{{.APP_NAME}}.app"
 
   codesign:skip:

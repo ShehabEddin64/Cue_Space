@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 
 	"github.com/ShehabEddin64/Cue_Space/internal/platform"
 	"github.com/ShehabEddin64/Cue_Space/internal/runner"
@@ -85,18 +88,34 @@ func main() {
 
 	menu, refreshCues := menuBar(app, cues, settingsFile)
 	app.Menu.Set(menu)
-	// Keep the Cues menu (and its ⌘1–⌘9 shortcuts) in step with the library.
-	cueService.OnChange = refreshCues
-	// Only pins change the menu; greeting edits and the like don't.
+
+	// The desktop widget reads a snapshot of the Cues from the data folder.
+	exe, _ := os.Executable()
+	widgets := &services.WidgetWriter{Dir: dir, Reload: filepath.Join(filepath.Dir(exe), "cuespace-widget-reload")}
+	updateWidgets := func() {
+		list, _, _ := cues.List()
+		st, _ := settingsFile.Load()
+		widgets.Update(list, st.Prefs.Pinned)
+	}
+	go updateWidgets()
+
+	// Keep the Cues menu (and its ⌘1–⌘9 shortcuts) and the widget in step
+	// with the library.
+	cueService.OnChange = func() {
+		refreshCues()
+		updateWidgets()
+	}
+	// Only pins change the menu and widget; greeting edits and the like don't.
 	var lastPinned string
 	prefsService.OnChange = func(p settings.Prefs) {
 		if pinned := strings.Join(p.Pinned, ","); pinned != lastPinned {
 			lastPinned = pinned
 			refreshCues()
+			updateWidgets()
 		}
 	}
 
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Cue Space",
 		Width:     1180,
 		Height:    760,
@@ -108,6 +127,14 @@ func main() {
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
 		URL: "/",
+	})
+
+	// cuespace:// links, used by the widget (and by Shortcuts, Raycast…):
+	//   cuespace://start/<id>  starts a Cue
+	//   cuespace://open/<id>   shows a Cue
+	//   cuespace://open        shows the app
+	app.Event.OnApplicationEvent(events.Common.ApplicationLaunchedWithUrl, func(e *application.ApplicationEvent) {
+		handleURL(app, window, cueService, e.Context().URL())
 	})
 
 	if err := app.Run(); err != nil {
@@ -195,4 +222,44 @@ func menuBar(app *application.App, cues *store.Store, prefs *settings.File) (*ap
 	}
 	refresh()
 	return menu, refresh
+}
+
+// RunEvent tells the frontend about a Cue started from outside the window.
+type RunEvent struct {
+	CueID   string        `json:"cueId"`
+	CueName string        `json:"cueName"`
+	Result  runner.Result `json:"result"`
+	Error   string        `json:"error,omitempty"`
+}
+
+func handleURL(app *application.App, window *application.WebviewWindow, cs *services.CueService, raw string) {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "cuespace" {
+		return
+	}
+	id := strings.Trim(u.Path, "/")
+	switch u.Host {
+	case "start":
+		if id == "" {
+			return
+		}
+		go func() {
+			ev := RunEvent{CueID: id}
+			if c, err := cs.Get(id); err == nil {
+				ev.CueName = c.Name
+			}
+			res, err := cs.Start(context.Background(), id)
+			ev.Result = res
+			if err != nil {
+				ev.Error = err.Error()
+			}
+			app.Event.Emit(services.EventCueRan, ev)
+		}()
+	case "open":
+		window.Show()
+		window.Focus()
+		if id != "" {
+			app.Event.Emit(services.EventMenu, "open:"+id)
+		}
+	}
 }

@@ -23,13 +23,23 @@ export function GetSettings(): $CancellablePromise<$models.AISettings> {
 }
 
 /**
+ * ListModels lists the models a provider offers, using the settings being
+ * edited (an empty apiKey falls back to the saved key for that provider).
+ */
+export function ListModels(cfg: ai$0.Config, apiKey: string): $CancellablePromise<string[]> {
+    return $Call.ByID(496896172, cfg, apiKey).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
  * Propose asks the AI for a Cue. With base set (a saved Cue or an earlier,
  * unsaved proposal), the AI changes that Cue instead of starting over. The
  * result is only a proposal: nothing is saved until the user saves it.
  */
 export function Propose(description: string, base: cue$0.Cue | null): $CancellablePromise<ai$0.Proposal> {
     return $Call.ByID(1484711540, description, base).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType2($result);
     });
 }
 
@@ -39,7 +49,7 @@ export function Propose(description: string, base: cue$0.Cue | null): $Cancellab
  */
 export function Resolve(phrases: string[]): $CancellablePromise<ai$0.Resolution> {
     return $Call.ByID(390529134, phrases).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType3($result);
     });
 }
 
@@ -60,5 +70,6 @@ export function TestConnection(): $CancellablePromise<void> {
 
 // Private type creation functions
 const $$createType0 = $models.AISettings.createFrom;
-const $$createType1 = ai$0.Proposal.createFrom;
-const $$createType2 = ai$0.Resolution.createFrom;
+const $$createType1 = $Create.Array($Create.Any);
+const $$createType2 = ai$0.Proposal.createFrom;
+const $$createType3 = ai$0.Resolution.createFrom;

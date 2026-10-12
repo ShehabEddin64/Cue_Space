@@ -26,6 +26,8 @@ type Provider interface {
 	Complete(ctx context.Context, req Request) (string, error)
 	// Check verifies the key and model without spending tokens where possible.
 	Check(ctx context.Context) error
+	// Models lists the model ids this key can use, for the Settings picker.
+	Models(ctx context.Context) ([]string, error)
 }
 
 // ErrNotConfigured means the user has not set up an AI provider yet.
@@ -33,16 +35,21 @@ var ErrNotConfigured = errors.New("no AI provider configured: add one in Setting
 
 // Config selects and configures a provider.
 type Config struct {
-	Provider string `json:"provider"` // "anthropic" | "openai"
+	Provider string `json:"provider"` // "anthropic" | "gemini" | "openai"
 	Model    string `json:"model"`
 	BaseURL  string `json:"baseUrl"`
 }
 
 const (
 	ProviderAnthropic = "anthropic"
+	ProviderGemini    = "gemini"
 	ProviderOpenAI    = "openai"
 
 	DefaultAnthropicModel = "claude-opus-5-5"
+	DefaultGeminiModel    = "gemini-2.5-flash"
+
+	// GeminiBaseURL is Google's OpenAI-compatible endpoint for the Gemini API.
+	GeminiBaseURL = "https://generativelanguage.googleapis.com/v1beta/openai"
 )
 
 // New builds the provider described by cfg. apiKey may be empty for local
@@ -58,6 +65,15 @@ func New(cfg Config, apiKey string) (Provider, error) {
 			model = DefaultAnthropicModel
 		}
 		return NewAnthropic(apiKey, model, cfg.BaseURL), nil
+	case ProviderGemini:
+		if apiKey == "" {
+			return nil, errors.New("add your Gemini API key in Settings (free at aistudio.google.com)")
+		}
+		model := cfg.Model
+		if model == "" {
+			model = DefaultGeminiModel
+		}
+		return NewOpenAICompat(GeminiBaseURL, apiKey, model), nil
 	case ProviderOpenAI:
 		if cfg.BaseURL == "" {
 			return nil, errors.New("set the base URL of your OpenAI-compatible server in Settings")
@@ -81,6 +97,8 @@ type Disclosure struct {
 	Vendor string `json:"vendor"`
 	// Local is true when requests never leave this Mac.
 	Local bool `json:"local"`
+	// Note is anything else worth knowing about where requests go.
+	Note string `json:"note,omitempty"`
 }
 
 func Describe(cfg Config) Disclosure {
@@ -91,6 +109,16 @@ func Describe(cfg Config) Disclosure {
 			model = DefaultAnthropicModel
 		}
 		return Disclosure{Model: prettyModel(model), Vendor: "Anthropic"}
+	case ProviderGemini:
+		model := cfg.Model
+		if model == "" {
+			model = DefaultGeminiModel
+		}
+		return Disclosure{
+			Model:  prettyModel(strings.TrimPrefix(model, "models/")),
+			Vendor: "Google",
+			Note:   "On Google’s free tier, Google may use your requests to improve its products.",
+		}
 	case ProviderOpenAI:
 		d := Disclosure{Model: cfg.Model}
 		u, err := url.Parse(cfg.BaseURL)

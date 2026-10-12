@@ -153,7 +153,7 @@ export const Composer = forwardRef<
             </button>
           ) : (
             <span>
-              {commands.length > 0 ? "Type / for commands, or connect an AI to describe things" : "Bring your own AI: Anthropic, OpenAI-compatible or a local model"}
+              {commands.length > 0 ? "Type / for commands, or connect an AI to describe things" : "Bring your own AI: Gemini (free tier), Anthropic, OpenAI-compatible or a local model"}
             </span>
           )}
         </div>
