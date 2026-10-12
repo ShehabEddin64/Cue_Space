@@ -64,6 +64,7 @@ func (c *Cue) Validate() error {
 			p = append(p, where+": openWith only applies to files and folders")
 		}
 	}
+	p = append(p, c.validateLayout()...)
 	if len(p) > 0 {
 		return &ValidationError{Problems: p}
 	}

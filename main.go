@@ -49,9 +49,14 @@ func main() {
 	cues.Trash = platform.MoveToTrash
 
 	system := &services.SystemService{CuesFolder: cues.Dir()}
+	launcher := platform.NewLauncher()
 	cueService := &services.CueService{
-		Store:  cues,
-		Runner: &runner.Runner{Launcher: platform.NewLauncher(), Home: home},
+		Store: cues,
+		Runner: &runner.Runner{
+			Launcher: launcher,
+			Arranger: &platform.Arranger{Launcher: launcher, LogDir: filepath.Join(dir, "logs")},
+			Home:     home,
+		},
 	}
 	settingsFile := settings.Open(filepath.Join(dir, "settings.json"))
 	aiService := &services.AIService{

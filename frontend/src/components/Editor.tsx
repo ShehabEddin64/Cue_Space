@@ -2,6 +2,7 @@ import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cue, CueService, errorMessage, newResource, Resource, ResourceType, SystemService } from "../api";
+import { LayoutEditor } from "./Layout";
 import { ResourceRow } from "./ResourceRow";
 import { Toolbar } from "./Toolbar";
 import { Button, CueMark, Kbd, SectionTitle, TypeIcon, typeNames } from "./ui";
@@ -235,6 +236,7 @@ export function Editor({
                   {draft.resources.map((r, i) => (
                     <ResourceRow
                       key={r.id}
+                      index={i}
                       resource={r}
                       question={questions[r.id]}
                       autoFocus={focusId === r.id}
@@ -261,6 +263,11 @@ export function Editor({
                 </Button>
               ))}
             </div>
+          </div>
+
+          <div className="mt-10">
+            <SectionTitle trailing={<span className="text-[11px] text-faint">Needs Accessibility permission</span>}>Desktops</SectionTitle>
+            <LayoutEditor cue={draft} onChange={(layout) => set({ layout })} />
           </div>
 
           {(problems.length > 0 || error) && (

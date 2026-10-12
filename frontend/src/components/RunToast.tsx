@@ -1,6 +1,6 @@
 import { AlertCircle, X } from "lucide-react";
 import { useEffect } from "react";
-import { Status, type Result } from "../api";
+import { Status, SystemService, type Result } from "../api";
 import { CueMark } from "./ui";
 
 export type RunReport = { cueName: string; result: Result } | { cueName: string; error: string };
@@ -9,7 +9,7 @@ export type RunReport = { cueName: string; result: Result } | { cueName: string;
 export function RunToast({ report, onClose, onFix }: { report: RunReport; onClose: () => void; onFix: () => void }) {
   const failed = "result" in report ? report.result.steps.filter((s) => s.status === Status.StatusFailed) : [];
   const opened = "result" in report ? report.result.steps.filter((s) => s.status === Status.StatusOK).length : 0;
-  const ok = "result" in report && failed.length === 0;
+  const ok = "result" in report && failed.length === 0 && report.result.notes.length === 0;
 
   // Successful runs dismiss themselves; problems stay until read.
   useEffect(() => {
@@ -50,11 +50,34 @@ export function RunToast({ report, onClose, onFix }: { report: RunReport; onClos
                   ))}
                 </ul>
               )}
-              {failed.length > 0 && (
-                <button onClick={onFix} className="mt-2.5 text-[12px] font-medium text-red-text hover:underline">
-                  Fix in Editor
-                </button>
+              {report.result.steps.some((s) => s.note) && (
+                <ul className="mt-2 space-y-0.5">
+                  {report.result.steps
+                    .filter((s) => s.note && s.status === Status.StatusOK)
+                    .map((s) => (
+                      <li key={s.resourceId} className="truncate text-[12px] text-graphite">
+                        <span className="font-medium text-ink">{s.label}</span> · {s.note}
+                      </li>
+                    ))}
+                </ul>
               )}
+              {report.result.notes.map((n) => (
+                <p key={n} className="mt-2 text-[12px] text-red-on-tint">
+                  {n}
+                </p>
+              ))}
+              <div className="mt-2.5 flex gap-3">
+                {failed.length > 0 && (
+                  <button onClick={onFix} className="text-[12px] font-medium text-red-text hover:underline">
+                    Fix in Editor
+                  </button>
+                )}
+                {report.result.needsAccessibility && (
+                  <button onClick={() => SystemService.RequestArrangeWindows()} className="text-[12px] font-medium text-red-text hover:underline">
+                    Allow Accessibility…
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>

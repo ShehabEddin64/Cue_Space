@@ -29,6 +29,88 @@ export class AppRef {
 }
 
 /**
+ * Arrangement is how windows share one desktop, mirroring macOS's own
+ * Move & Resize and Fill & Arrange choices.
+ */
+export enum Arrangement {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * one item, native full screen on its own desktop
+     */
+    ArrangeFullScreen = "fullscreen",
+
+    /**
+     * one item fills the desktop
+     */
+    ArrangeFill = "fill",
+
+    /**
+     * two halves side by side
+     */
+    ArrangeLeftRight = "left-right",
+
+    /**
+     * two halves stacked
+     */
+    ArrangeTopBottom = "top-bottom",
+
+    /**
+     * left half, right half split in two
+     */
+    ArrangeLeftQuarters = "left-quarters",
+
+    /**
+     * four quarters
+     */
+    ArrangeQuarters = "quarters",
+
+    /**
+     * three columns
+     */
+    ArrangeThirds = "thirds",
+};
+
+/**
+ * ArrangementInfo describes an arrangement for the editor and the runner.
+ */
+export class ArrangementInfo {
+    "id": Arrangement;
+    "title": string;
+    "slots": Rect[];
+
+    /** Creates a new ArrangementInfo instance. */
+    constructor($$source: Partial<ArrangementInfo> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = Arrangement.$zero;
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("slots" in $$source)) {
+            this["slots"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ArrangementInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ArrangementInfo {
+        const $$createField2_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("slots" in $$parsedSource) {
+            $$parsedSource["slots"] = $$createField2_0($$parsedSource["slots"]);
+        }
+        return new ArrangementInfo($$parsedSource as Partial<ArrangementInfo>);
+    }
+}
+
+/**
  * Cue is a saved context for an activity.
  */
 export class Cue {
@@ -38,6 +120,11 @@ export class Cue {
     "icon"?: string;
     "description"?: string;
     "resources": Resource[];
+
+    /**
+     * Layout optionally places windows on desktops (macOS Spaces).
+     */
+    "layout"?: Layout | null;
     "createdAt"?: string;
     "updatedAt"?: string;
     "lastRunAt"?: string;
@@ -64,12 +151,128 @@ export class Cue {
      * Creates a new Cue instance from a string or object.
      */
     static createFrom($$source: any = {}): Cue {
-        const $$createField5_0 = $$createType1;
+        const $$createField5_0 = $$createType3;
+        const $$createField6_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("resources" in $$parsedSource) {
             $$parsedSource["resources"] = $$createField5_0($$parsedSource["resources"]);
         }
+        if ("layout" in $$parsedSource) {
+            $$parsedSource["layout"] = $$createField6_0($$parsedSource["layout"]);
+        }
         return new Cue($$parsedSource as Partial<Cue>);
+    }
+}
+
+/**
+ * Desktop is one macOS desktop (Space) in a Cue's layout.
+ */
+export class Desktop {
+    "id": string;
+    "arrangement": Arrangement;
+
+    /**
+     * Slots holds a resource id per position; "" leaves a slot empty.
+     */
+    "slots": string[];
+
+    /**
+     * NewDesktop puts a tiled arrangement on a new desktop instead of the
+     * current one. Full screen always gets its own desktop.
+     */
+    "newDesktop"?: boolean;
+
+    /** Creates a new Desktop instance. */
+    constructor($$source: Partial<Desktop> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("arrangement" in $$source)) {
+            this["arrangement"] = Arrangement.$zero;
+        }
+        if (!("slots" in $$source)) {
+            this["slots"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Desktop instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Desktop {
+        const $$createField2_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("slots" in $$parsedSource) {
+            $$parsedSource["slots"] = $$createField2_0($$parsedSource["slots"]);
+        }
+        return new Desktop($$parsedSource as Partial<Desktop>);
+    }
+}
+
+/**
+ * Layout says where a Cue's windows go. Items not placed in any slot open
+ * normally on the current desktop, before the layout's desktops.
+ */
+export class Layout {
+    "desktops": Desktop[];
+
+    /** Creates a new Layout instance. */
+    constructor($$source: Partial<Layout> = {}) {
+        if (!("desktops" in $$source)) {
+            this["desktops"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Layout instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Layout {
+        const $$createField0_0 = $$createType8;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("desktops" in $$parsedSource) {
+            $$parsedSource["desktops"] = $$createField0_0($$parsedSource["desktops"]);
+        }
+        return new Layout($$parsedSource as Partial<Layout>);
+    }
+}
+
+/**
+ * Rect is a slot on a desktop, as fractions of the screen's usable area,
+ * with the origin at the top left.
+ */
+export class Rect {
+    "x": number;
+    "y": number;
+    "w": number;
+    "h": number;
+
+    /** Creates a new Rect instance. */
+    constructor($$source: Partial<Rect> = {}) {
+        if (!("x" in $$source)) {
+            this["x"] = 0;
+        }
+        if (!("y" in $$source)) {
+            this["y"] = 0;
+        }
+        if (!("w" in $$source)) {
+            this["w"] = 0;
+        }
+        if (!("h" in $$source)) {
+            this["h"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Rect instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Rect {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Rect($$parsedSource as Partial<Rect>);
     }
 }
 
@@ -118,8 +321,8 @@ export class Resource {
      * Creates a new Resource instance from a string or object.
      */
     static createFrom($$source: any = {}): Resource {
-        const $$createField5_0 = $$createType3;
-        const $$createField7_0 = $$createType3;
+        const $$createField5_0 = $$createType10;
+        const $$createField7_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("app" in $$parsedSource) {
             $$parsedSource["app"] = $$createField5_0($$parsedSource["app"]);
@@ -144,7 +347,14 @@ export enum ResourceType {
 };
 
 // Private type creation functions
-const $$createType0 = Resource.createFrom;
+const $$createType0 = Rect.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = AppRef.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);
+const $$createType2 = Resource.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = Layout.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = $Create.Array($Create.Any);
+const $$createType7 = Desktop.createFrom;
+const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = AppRef.createFrom;
+const $$createType10 = $Create.Nullable($$createType9);

@@ -78,9 +78,11 @@ type Cue struct {
 	Icon          string     `json:"icon,omitempty"`
 	Description   string     `json:"description,omitempty"`
 	Resources     []Resource `json:"resources"`
-	CreatedAt     time.Time  `json:"createdAt,omitzero"`
-	UpdatedAt     time.Time  `json:"updatedAt,omitzero"`
-	LastRunAt     time.Time  `json:"lastRunAt,omitzero"`
+	// Layout optionally places windows on desktops (macOS Spaces).
+	Layout    *Layout   `json:"layout,omitempty"`
+	CreatedAt time.Time `json:"createdAt,omitzero"`
+	UpdatedAt time.Time `json:"updatedAt,omitzero"`
+	LastRunAt time.Time `json:"lastRunAt,omitzero"`
 }
 
 // Normalize trims text fields, fills in missing ids and the schema version.
@@ -113,6 +115,7 @@ func (c *Cue) Normalize() {
 			r.OpenWith = nil
 		}
 	}
+	c.normalizeLayout()
 }
 
 // NewID returns a short random identifier.

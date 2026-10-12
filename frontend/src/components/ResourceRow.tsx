@@ -7,6 +7,7 @@ import { AppPicker } from "./AppPicker";
 import { Button, IconButton, Input, TypeIcon, typeNames } from "./ui";
 
 export function ResourceRow({
+  index,
   resource: r,
   question,
   autoFocus,
@@ -14,6 +15,7 @@ export function ResourceRow({
   onRemove,
   onDismissQuestion,
 }: {
+  index: number;
   resource: Resource;
   question?: string;
   autoFocus?: boolean;
@@ -50,6 +52,9 @@ export function ResourceRow({
           <GripVertical className="size-4" />
         </button>
 
+        <span className="mt-[7px] w-4 shrink-0 text-right font-mono text-[11px] text-faint" aria-label={`Item ${index + 1}`}>
+          {index + 1}
+        </span>
         <div
           title={typeNames[r.type]}
           className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-fill text-graphite"

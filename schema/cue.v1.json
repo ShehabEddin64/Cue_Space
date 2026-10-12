@@ -15,12 +15,35 @@
       "type": "array",
       "items": { "$ref": "#/$defs/resource" }
     },
+    "layout": { "$ref": "#/$defs/layout" },
     "createdAt": { "type": "string", "format": "date-time" },
     "updatedAt": { "type": "string", "format": "date-time" },
     "lastRunAt": { "type": "string", "format": "date-time" }
   },
   "additionalProperties": false,
   "$defs": {
+    "layout": {
+      "type": "object",
+      "description": "Where windows go when the Cue starts: one entry per macOS desktop (Space). Items not placed in a slot open normally first.",
+      "required": ["desktops"],
+      "properties": {
+        "desktops": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["arrangement", "slots"],
+            "properties": {
+              "id": { "type": "string" },
+              "arrangement": { "enum": ["fullscreen", "fill", "left-right", "top-bottom", "left-quarters", "quarters", "thirds"] },
+              "slots": { "type": "array", "items": { "type": "string" }, "description": "A resource id per position; empty string leaves it empty." },
+              "newDesktop": { "type": "boolean", "description": "Tiled arrangements only: use a new desktop instead of the current one." }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "appRef": {
       "type": "object",
       "description": "An installed application, identified by bundle id (preferred) or name.",

@@ -267,3 +267,23 @@ func TestResolveAI(t *testing.T) {
 		t.Errorf("resolve prompt should be short and list phrases: %d chars", len(p.got.System))
 	}
 }
+
+func TestProposeEditKeepsLayout(t *testing.T) {
+	existing := &cue.Cue{ID: "c", Name: "Math", SchemaVersion: 1,
+		Resources: []cue.Resource{{ID: "calc", Type: cue.TypeApp, App: &cue.AppRef{BundleID: "com.apple.calculator", Name: "Calculator"}}},
+		Layout:    &cue.Layout{Desktops: []cue.Desktop{{ID: "d", Arrangement: cue.ArrangeFill, Slots: []string{"calc"}}}}}
+	answer := `{"name":"Math","icon":"","description":"","notes":"","resources":[
+	  {"type":"app","label":"","url":null,"appName":"Calculator","path":null,"openWithName":null,"needsInput":null},
+	  {"type":"url","label":"","url":"https://a.b","appName":null,"path":null,"openWithName":null,"needsInput":null}]}`
+	apps := append(installed, platform.App{Name: "Calculator", BundleID: "com.apple.calculator"})
+	prop, err := Propose(context.Background(), &fakeProvider{answer: answer}, "add a link", existing, apps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prop.Cue.Resources[0].ID != "calc" {
+		t.Errorf("kept item got a new id %q", prop.Cue.Resources[0].ID)
+	}
+	if prop.Cue.Layout == nil || prop.Cue.Layout.Desktops[0].Slots[0] != "calc" {
+		t.Errorf("layout lost: %+v", prop.Cue.Layout)
+	}
+}

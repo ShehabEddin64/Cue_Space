@@ -22,3 +22,17 @@ func Reveal(string) error                                            { return Er
 func MoveToTrash(string) error                                       { return ErrUnsupported }
 func AppDirs() []string                                              { return nil }
 func InstalledApps([]string) []App                                   { return nil }
+
+// Arranger is a placeholder until window placement exists on other systems.
+type Arranger struct {
+	Launcher *Launcher
+	LogDir   string
+}
+
+func (a *Arranger) Ready() bool                      { return false }
+func (a *Arranger) NewDesktop(context.Context) error { return ErrUnsupported }
+func (a *Arranger) Place(context.Context, cue.Resource, string, cue.Rect, bool) (string, error) {
+	return "", ErrUnsupported
+}
+func AccessibilityTrusted(bool) bool   { return false }
+func OpenAccessibilitySettings() error { return ErrUnsupported }

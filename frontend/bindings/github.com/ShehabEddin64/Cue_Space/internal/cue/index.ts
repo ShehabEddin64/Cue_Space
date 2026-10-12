@@ -3,7 +3,12 @@
 
 export {
     AppRef,
+    Arrangement,
+    ArrangementInfo,
     Cue,
+    Desktop,
+    Layout,
+    Rect,
     Resource,
     ResourceType
 } from "./models.js";

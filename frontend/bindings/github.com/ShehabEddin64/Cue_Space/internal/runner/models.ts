@@ -14,6 +14,17 @@ export class Result {
      */
     "ok": boolean;
 
+    /**
+     * Notes are run-wide remarks, e.g. a desktop that couldn't be created.
+     */
+    "notes": string[];
+
+    /**
+     * NeedsAccessibility is true when a layout was skipped because Cue Space
+     * isn't allowed to arrange windows yet.
+     */
+    "needsAccessibility": boolean;
+
     /** Creates a new Result instance. */
     constructor($$source: Partial<Result> = {}) {
         if (!("cueId" in $$source)) {
@@ -25,6 +36,12 @@ export class Result {
         if (!("ok" in $$source)) {
             this["ok"] = false;
         }
+        if (!("notes" in $$source)) {
+            this["notes"] = [];
+        }
+        if (!("needsAccessibility" in $$source)) {
+            this["needsAccessibility"] = false;
+        }
 
         Object.assign(this, $$source);
     }
@@ -34,9 +51,13 @@ export class Result {
      */
     static createFrom($$source: any = {}): Result {
         const $$createField1_0 = $$createType1;
+        const $$createField3_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("steps" in $$parsedSource) {
             $$parsedSource["steps"] = $$createField1_0($$parsedSource["steps"]);
+        }
+        if ("notes" in $$parsedSource) {
+            $$parsedSource["notes"] = $$createField3_0($$parsedSource["notes"]);
         }
         return new Result($$parsedSource as Partial<Result>);
     }
@@ -58,6 +79,11 @@ export class StepResult {
     "label": string;
     "status": Status;
     "error"?: string;
+
+    /**
+     * Note adds detail about where the window went, e.g. "Full screen".
+     */
+    "note"?: string;
 
     /** Creates a new StepResult instance. */
     constructor($$source: Partial<StepResult> = {}) {
@@ -86,3 +112,4 @@ export class StepResult {
 // Private type creation functions
 const $$createType0 = StepResult.createFrom;
 const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $Create.Array($Create.Any);

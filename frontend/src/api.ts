@@ -9,7 +9,12 @@ export { HomePrefs, HomeSection, Prefs } from "../bindings/github.com/ShehabEddi
 export type { AISettings, Library } from "../bindings/github.com/ShehabEddin64/Cue_Space/services";
 export {
   AppRef,
+  Arrangement,
+  ArrangementInfo,
   Cue,
+  Desktop,
+  Layout,
+  Rect,
   Resource,
   ResourceType,
 } from "../bindings/github.com/ShehabEddin64/Cue_Space/internal/cue";

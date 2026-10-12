@@ -173,6 +173,26 @@ func (s *SystemService) ResolveItems(text string) resolve.Result {
 	return r.Resolve(resolve.Split(text))
 }
 
+// Arrangements lists the window arrangements a desktop can use.
+func (s *SystemService) Arrangements() []cue.ArrangementInfo {
+	return cue.Arrangements
+}
+
+// CanArrangeWindows reports whether Cue Space has Accessibility permission.
+func (s *SystemService) CanArrangeWindows() bool {
+	return platform.AccessibilityTrusted(false)
+}
+
+// RequestArrangeWindows shows macOS's Accessibility permission prompt (if
+// needed) and opens the settings pane where it's granted.
+func (s *SystemService) RequestArrangeWindows() bool {
+	if platform.AccessibilityTrusted(true) {
+		return true
+	}
+	_ = platform.OpenAccessibilitySettings()
+	return false
+}
+
 // RevealCuesFolder shows the folder holding the .cue.json files in Finder.
 func (s *SystemService) RevealCuesFolder() error {
 	return platform.Reveal(s.CuesFolder)

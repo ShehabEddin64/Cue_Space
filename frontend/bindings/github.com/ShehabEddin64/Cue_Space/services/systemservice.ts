@@ -7,10 +7,29 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as cue$0 from "../internal/cue/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as platform$0 from "../internal/platform/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as resolve$0 from "../internal/resolve/models.js";
+
+/**
+ * Arrangements lists the window arrangements a desktop can use.
+ */
+export function Arrangements(): $CancellablePromise<cue$0.ArrangementInfo[]> {
+    return $Call.ByID(1231617144).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
+ * CanArrangeWindows reports whether Cue Space has Accessibility permission.
+ */
+export function CanArrangeWindows(): $CancellablePromise<boolean> {
+    return $Call.ByID(3427186364);
+}
 
 /**
  * ChooseFile shows an Open panel and returns the path ("" if cancelled).
@@ -31,7 +50,7 @@ export function ChooseFolder(): $CancellablePromise<string> {
  */
 export function InstalledApps(): $CancellablePromise<platform$0.App[]> {
     return $Call.ByID(3278180409).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
@@ -47,8 +66,16 @@ export function PathExists(path: string): $CancellablePromise<boolean> {
  */
 export function RefreshApps(): $CancellablePromise<platform$0.App[]> {
     return $Call.ByID(780738092).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
+}
+
+/**
+ * RequestArrangeWindows shows macOS's Accessibility permission prompt (if
+ * needed) and opens the settings pane where it's granted.
+ */
+export function RequestArrangeWindows(): $CancellablePromise<boolean> {
+    return $Call.ByID(1336736259);
 }
 
 /**
@@ -57,7 +84,7 @@ export function RefreshApps(): $CancellablePromise<platform$0.App[]> {
  */
 export function ResolveItems(text: string): $CancellablePromise<resolve$0.Result> {
     return $Call.ByID(3191824261, text).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType4($result);
     });
 }
 
@@ -69,6 +96,8 @@ export function RevealCuesFolder(): $CancellablePromise<void> {
 }
 
 // Private type creation functions
-const $$createType0 = platform$0.App.createFrom;
+const $$createType0 = cue$0.ArrangementInfo.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = resolve$0.Result.createFrom;
+const $$createType2 = platform$0.App.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = resolve$0.Result.createFrom;

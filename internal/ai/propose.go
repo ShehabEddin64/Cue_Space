@@ -110,8 +110,50 @@ func Propose(ctx context.Context, p Provider, description string, existing *cue.
 		prop.Cue.ID = existing.ID
 		prop.Cue.CreatedAt = existing.CreatedAt
 		prop.Cue.LastRunAt = existing.LastRunAt
+		keepIdentity(&prop, existing)
 	}
 	return prop, nil
+}
+
+// keepIdentity gives unchanged items their old ids, so the Cue's desktop
+// layout still points at them after an AI edit.
+func keepIdentity(prop *Proposal, existing *cue.Cue) {
+	key := func(r cue.Resource) string {
+		switch r.Type {
+		case cue.TypeURL:
+			return "url:" + r.URL
+		case cue.TypeApp:
+			if r.App != nil {
+				return "app:" + strings.ToLower(r.App.BundleID+"|"+r.App.Name)
+			}
+		case cue.TypeFile, cue.TypeFolder:
+			return string(r.Type) + ":" + r.Path
+		}
+		return ""
+	}
+	old := map[string]string{}
+	for _, r := range existing.Resources {
+		if k := key(r); k != "" {
+			old[k] = r.ID
+		}
+	}
+	for i := range prop.Cue.Resources {
+		r := &prop.Cue.Resources[i]
+		if id, ok := old[key(*r)]; ok {
+			if q, had := prop.Questions[r.ID]; had {
+				delete(prop.Questions, r.ID)
+				prop.Questions[id] = q
+			}
+			r.ID = id
+			delete(old, key(*r))
+		}
+	}
+	if existing.Layout != nil {
+		layout := *existing.Layout
+		layout.Desktops = append([]cue.Desktop(nil), existing.Layout.Desktops...)
+		prop.Cue.Layout = &layout
+	}
+	prop.Cue.Normalize()
 }
 
 // appList is a compact, comma-separated list of app names. Names are enough

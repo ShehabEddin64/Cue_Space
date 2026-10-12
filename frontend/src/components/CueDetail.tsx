@@ -5,6 +5,7 @@ import { applyEdit, cueCommands, parseCommand } from "../commands";
 import { usePrefs } from "../prefs";
 import { useProposal } from "../useProposal";
 import { Composer, type ComposerHandle } from "./Composer";
+import { DesktopStrip } from "./Layout";
 import { ProposalCard } from "./ProposalCard";
 import { Toolbar } from "./Toolbar";
 import { Button, InsetList, SectionTitle, TypeIcon } from "./ui";
@@ -184,6 +185,21 @@ export function CueDetail({
               </div>
             )}
           </div>
+
+          {!flow.proposal && cue.layout && cue.layout.desktops.length > 0 && (
+            <section className="mt-9">
+              <SectionTitle
+                trailing={
+                  <button onClick={onEdit} className="text-[12px] font-medium text-red-text hover:underline">
+                    Edit Layout
+                  </button>
+                }
+              >
+                Desktops
+              </SectionTitle>
+              <DesktopStrip cue={cue} onEdit={onEdit} />
+            </section>
+          )}
 
           {!flow.proposal && (
             <section className="mt-9">
