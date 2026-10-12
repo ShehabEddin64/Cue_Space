@@ -85,7 +85,7 @@ Cue Space follows Apple’s Human Interface Guidelines for structure and its own
 - **The mark.** A ring (the intention) and a dot (the cue that closes it). While the AI works, the dot travels the ring.
 - **AI first, never required.** Home leads with the composer. Proposals are reviewed in place and can be fixed, refined, retried, undone or discarded. The app always says which model is used and where requests go. Building a Cue by hand is always one click away.
 - **Mac conventions.** A sidebar you can hide (⌃⌘S), every command in the menu bar, Settings at ⌘,, and an Appearance setting (System, Light or Dark).
-- **Customizable Home.** Change the greeting, show, hide and reorder the sections (Suggestions, Pinned, Recently Used) from View › Customize Home.
+- **Customizable Home.** Change the greeting, show, hide and reorder the sections (Pinned, Recently Used) and pick a Small, Medium or Large size for each from View › Customize Home.
 - **First run.** A five-step welcome tour, replayable from Help › Welcome Tour.
 - **App icon.** A full-bleed Cue Red square with the mark and a soft shadow, so macOS 26 masks it into the standard shape instead of placing it on a plate. `build/appicon.icon` is the Icon Composer source; compiling it into `Assets.car` needs full Xcode, so builds use `build/darwin/icons.icns`, generated from `build/appicon.png`.
 
@@ -103,10 +103,10 @@ Run with hot reload:
 wails3 dev
 ```
 
-Build `bin/cuespace.app`:
+Build `bin/cuespace.app` and open it (quits the running copy and refreshes the widget first; add `--no-run` to only build):
 
 ```bash
-wails3 task darwin:package
+./scripts/build.sh
 ```
 
 Run the Go tests:

@@ -193,6 +193,20 @@
   animation: pop-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
+/* A new idea in the composer slides up into place. */
+@keyframes idea-in {
+  from {
+    transform: translateY(5px);
+  }
+  to {
+    transform: none;
+  }
+}
+.animate-idea-in {
+  display: inline-block;
+  animation: idea-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
 /* The signature moment: while the AI works, the dot travels the ring. */
 @keyframes orbit {
   to {
@@ -212,7 +226,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-pop-in {
+  .animate-pop-in,
+  .animate-idea-in {
     animation: none;
   }
   .cue-orbit {

@@ -34,16 +34,18 @@ type HomePrefs struct {
 	Greeting string `json:"greeting"`
 	// Sections are Home's blocks below the composer, in display order.
 	Sections []HomeSection `json:"sections"`
-	// RecentCount is how many Cues "Jump back in" shows.
+	// RecentCount is how many Cues "Recently Used" shows.
 	RecentCount int `json:"recentCount"`
 }
 
 type HomeSection struct {
-	ID      string `json:"id"` // "suggestions" | "pinned" | "recent"
+	ID      string `json:"id"` // "pinned" | "recent"
 	Visible bool   `json:"visible"`
+	// Size works like a widget size: "small", "medium" or "large".
+	Size string `json:"size"`
 }
 
-var defaultSections = []HomeSection{{"suggestions", true}, {"pinned", true}, {"recent", true}}
+var defaultSections = []HomeSection{{"pinned", true, "medium"}, {"recent", true, "medium"}}
 
 // Normalize fills in defaults and drops unknown or repeated values, so older
 // or hand-edited settings files keep working.
@@ -72,6 +74,11 @@ func (p *Prefs) Normalize() {
 		for _, d := range defaultSections {
 			if s.ID == d.ID && !known[s.ID] {
 				known[s.ID] = true
+				switch s.Size {
+				case "small", "medium", "large":
+				default:
+					s.Size = d.Size
+				}
 				sections = append(sections, s)
 			}
 		}

@@ -5,6 +5,8 @@ const keys: [string, string][] = [
   ["⌘1 … ⌘9", "Start your first nine Cues (pinned first)"],
   ["⌘N", "New Cue… (describe it)"],
   ["⌥⌘N", "New Cue manually"],
+  ["Tab", "Use the idea shown in the composer"],
+  ["↑ ↓", "See other ideas (composer empty)"],
   ["⌘Return", "Start the open Cue"],
   ["⌘E", "Edit the open Cue"],
   ["⇧⌘P", "Pin or unpin the open Cue"],

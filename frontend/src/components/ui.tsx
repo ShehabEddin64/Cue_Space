@@ -158,16 +158,16 @@ export function Sheet({
       <div
         role="dialog"
         aria-modal="true"
-        className={`animate-pop-in w-full ${width} overflow-hidden rounded-[20px] border border-hairline bg-surface shadow-pop`}
+        className={`animate-pop-in flex max-h-[84vh] w-full ${width} flex-col overflow-hidden rounded-[20px] border border-hairline bg-surface shadow-pop`}
       >
-        <div className="flex items-center justify-between px-6 pb-2 pt-5">
+        <div className="flex shrink-0 items-center justify-between px-6 pb-2 pt-5">
           <h2 className="text-[17px] font-semibold tracking-[-0.01em]">{title}</h2>
           <IconButton label="Close" onClick={onClose}>
             <X className="size-4" />
           </IconButton>
         </div>
-        <div className="px-6 pb-5 pt-2">{children}</div>
-        {footer && <div className="flex items-center justify-end gap-2 border-t border-hairline px-6 py-3.5">{footer}</div>}
+        <div className="min-h-0 overflow-y-auto px-6 pb-5 pt-2">{children}</div>
+        {footer && <div className="flex shrink-0 items-center justify-end gap-2 border-t border-hairline px-6 py-3.5">{footer}</div>}
       </div>
     </div>
   );

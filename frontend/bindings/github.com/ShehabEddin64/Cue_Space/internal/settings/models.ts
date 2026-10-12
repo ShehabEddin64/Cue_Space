@@ -17,7 +17,7 @@ export class HomePrefs {
     "sections": HomeSection[];
 
     /**
-     * RecentCount is how many Cues "Jump back in" shows.
+     * RecentCount is how many Cues "Recently Used" shows.
      */
     "recentCount": number;
 
@@ -51,10 +51,15 @@ export class HomePrefs {
 
 export class HomeSection {
     /**
-     * "suggestions" | "pinned" | "recent"
+     * "pinned" | "recent"
      */
     "id": string;
     "visible": boolean;
+
+    /**
+     * Size works like a widget size: "small", "medium" or "large".
+     */
+    "size": string;
 
     /** Creates a new HomeSection instance. */
     constructor($$source: Partial<HomeSection> = {}) {
@@ -63,6 +68,9 @@ export class HomeSection {
         }
         if (!("visible" in $$source)) {
             this["visible"] = false;
+        }
+        if (!("size" in $$source)) {
+            this["size"] = "";
         }
 
         Object.assign(this, $$source);

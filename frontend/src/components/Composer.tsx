@@ -2,7 +2,7 @@ import { ArrowUp, Square } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { AISettings } from "../api";
 import { parseCommand, suggestCommands, type CommandDef } from "../commands";
-import { CueMark } from "./ui";
+import { CueMark, Kbd } from "./ui";
 
 export type ComposerHandle = { focus: () => void; setText: (t: string) => void; clear: () => void };
 
@@ -24,6 +24,8 @@ export const Composer = forwardRef<
     compact?: boolean;
     initialText?: string;
     commands?: CommandDef[];
+    /** Suggestions shown inside the empty composer; Tab uses one, ↑↓ browse. */
+    ideas?: string[];
     /** Short status from the last command, e.g. "Added Figma". */
     status?: string;
     /** Shown instead of the AI progress steps while busy (e.g. for local commands). */
@@ -32,11 +34,13 @@ export const Composer = forwardRef<
     onCancel?: () => void;
     onConnect: () => void;
   }
->(function Composer({ ai, busy, placeholder, compact, initialText = "", commands = [], status, busyLabel, onSubmit, onCancel, onConnect }, ref) {
+>(function Composer({ ai, busy, placeholder, compact, initialText = "", commands = [], ideas = [], status, busyLabel, onSubmit, onCancel, onConnect }, ref) {
   const [text, setText] = useState(initialText);
   const [step, setStep] = useState(0);
   const [active, setActive] = useState(0);
+  const [idea, setIdea] = useState(0);
   const area = useRef<HTMLTextAreaElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
 
   const focusEnd = (t: string) =>
     requestAnimationFrame(() => {
@@ -53,13 +57,34 @@ export const Composer = forwardRef<
     },
   }));
 
-  // Grow with the text, up to a limit.
+  // What Tab would add: a whole idea while empty, or the rest of an idea
+  // that starts with what was typed.
+  const empty = text.length === 0;
+  const typedLower = text.toLowerCase();
+  const match = !empty && text.trim().length >= 2 && !text.startsWith("/") ? ideas.find((i) => i.toLowerCase().startsWith(typedLower) && i.length > text.length) : undefined;
+  const ghost = busy ? "" : empty ? (ideas[idea % Math.max(ideas.length, 1)] ?? "") : match ? match.slice(text.length) : "";
+
+  // Grow with the text (and any completion shown after it), up to a limit.
   useEffect(() => {
     const el = area.current;
     if (!el) return;
     el.style.height = "0px";
-    el.style.height = `${Math.min(el.scrollHeight, compact ? 120 : 180)}px`;
-  }, [text, compact]);
+    const ghostHeight = match ? (ghostRef.current?.scrollHeight ?? 0) : 0;
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, ghostHeight), compact ? 120 : 180)}px`;
+  }, [text, compact, match]);
+
+  // Show a different idea every few seconds while the composer is empty.
+  useEffect(() => {
+    if (!empty || busy || ideas.length < 2) return;
+    const t = setTimeout(() => setIdea((i) => (i + 1) % ideas.length), 4500);
+    return () => clearTimeout(t);
+  }, [empty, busy, idea, ideas.length]);
+
+  const acceptGhost = () => {
+    const t = empty ? ghost : match!;
+    setText(t);
+    focusEnd(t);
+  };
 
   useEffect(() => {
     if (!busy) return setStep(0);
@@ -97,6 +122,33 @@ export const Composer = forwardRef<
     >
       <div className={`flex items-start gap-3 ${compact ? "px-3.5 pt-3" : "px-5 pt-[18px]"}`}>
         <CueMark size={compact ? 20 : 26} thinking={busy} className={compact ? "mt-[3px]" : "mt-[2px]"} />
+        <div className="relative min-w-0 flex-1">
+          {ghost && (
+            <div
+              ref={ghostRef}
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-x-0 top-0 leading-[1.45] ${compact ? "py-[1px] text-[14px]" : "py-[2px] text-[17px]"} ${
+                empty ? "flex items-center gap-2" : "whitespace-pre-wrap break-words"
+              }`}
+            >
+              {empty ? (
+                <>
+                  <span key={idea} className="animate-idea-in min-w-0 truncate text-faint">
+                    {ghost}
+                  </span>
+                  <Kbd>Tab</Kbd>
+                </>
+              ) : (
+                <>
+                  <span className="invisible">{text}</span>
+                  <span className="text-faint">{ghost}</span>
+                  <span className="ml-2 inline-block align-[2px]">
+                    <Kbd>Tab</Kbd>
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         <textarea
           ref={area}
           rows={1}
@@ -119,6 +171,15 @@ export const Composer = forwardRef<
               }
               if (e.key === "Escape") return setText("");
             }
+            if (ghost && e.key === "Tab" && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
+              e.preventDefault();
+              return acceptGhost();
+            }
+            if (empty && ideas.length > 1 && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+              e.preventDefault();
+              const d = e.key === "ArrowDown" ? 1 : -1;
+              return setIdea((i) => (i + d + ideas.length) % ideas.length);
+            }
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
               submit();
@@ -126,12 +187,13 @@ export const Composer = forwardRef<
               onCancel();
             }
           }}
-          placeholder={placeholder}
+          placeholder={ghost ? "" : placeholder}
           spellCheck
-          className={`min-h-0 flex-1 resize-none bg-transparent leading-[1.45] placeholder:text-faint focus:outline-none disabled:opacity-60 ${
+          className={`relative block min-h-0 w-full resize-none bg-transparent leading-[1.45] placeholder:text-faint focus:outline-none disabled:opacity-60 ${
             compact ? "py-[1px] text-[14px]" : "py-[2px] text-[17px]"
           }`}
         />
+        </div>
       </div>
 
       <div className={`flex items-center justify-between gap-3 ${compact ? "px-3.5 pb-3 pt-2" : "px-5 pb-4 pt-3"}`}>

@@ -120,10 +120,17 @@ export function disclosureSentence(d: { model: string; vendor: string; local: bo
 }
 
 /** Examples that show what describing a Cue can do. */
-export const examplePrompts = [
-  { label: "Work on a project", text: "Work on Atlas: my GitHub repo, my IDE, Claude, localhost:3000 and the docs" },
-  { label: "Study a subject", text: "Study linear algebra: my textbook PDF, notes folder, Calculator and the course website" },
-  { label: "Design session", text: "Design session: Figma, my moodboard folder and Dribbble" },
+/** Ideas the composer offers: shown inside it, Tab to use one. */
+export const composerIdeas = [
+  "Work on Atlas: my GitHub repo, my IDE, Claude and localhost:3000",
+  "Study linear algebra: my textbook PDF, my notes folder and the course website",
+  "Design session: Figma, my moodboard folder and Dribbble",
+  "Morning check-in: Mail, Calendar, Notion and the weather",
+  "Write my essay: Google Docs, my research folder and Google Scholar",
+  "Edit a video: CapCut, my footage folder and YouTube Studio",
+  "Plan the week: Calendar, Reminders and my Notion to-do list",
+  "Electronics project: KiCad, my datasheets folder and Digi-Key",
+  "Team meeting: Zoom, the agenda doc and Slack",
 ];
 
 /** "github.com/me/atlas" → "https://github.com/me/atlas"; leaves full URLs alone. */

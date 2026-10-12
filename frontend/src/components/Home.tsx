@@ -1,12 +1,12 @@
-import { ArrowRight, Pin, Plus, SlidersHorizontal } from "lucide-react";
+import { Plus, SlidersHorizontal } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from "react";
-import { examplePrompts, recentlyUsed, shortcutOrder, timeAgo, type AISettings, type Cue, type Proposal } from "../api";
+import { composerIdeas, HomePrefs, HomeSection, Prefs, recentlyUsed, shortcutOrder, type AISettings, type Cue, type Proposal } from "../api";
 import { findCue, homeCommands, parseCommand } from "../commands";
 import { usePrefs } from "../prefs";
 import { useProposal } from "../useProposal";
 import { Composer, type ComposerHandle } from "./Composer";
 import { ProposalCard } from "./ProposalCard";
-import { RecentList } from "./Recents";
+import { asSize, CueCollection, SizePicker, type SectionSize } from "./HomeWidgets";
 import { Toolbar } from "./Toolbar";
 import { AIErrorNotice, Button } from "./ui";
 
@@ -35,7 +35,7 @@ export const Home = forwardRef<
     onHelp: () => void;
   }
 >(function Home({ ai, cues, starting, onOpen, onStart, onNewBlank, onRecents, onConnect, onSaved, onEditProposal, onCustomize, onHelp }, ref) {
-  const { prefs } = usePrefs();
+  const { prefs, save } = usePrefs();
   const composer = useRef<ComposerHandle>(null);
   const flow = useProposal(null, onSaved);
   const [status, setStatus] = useState("");
@@ -95,49 +95,36 @@ export const Home = forwardRef<
   const used = recentlyUsed(cues);
   const recent = used.slice(0, prefs.home.recentCount);
 
-  const card = (c: Cue) => (
-    <CueCard
-      key={c.id}
-      cue={c}
-      shortcut={shortcut(c)}
-      pinned={prefs.pinned.includes(c.id)}
-      starting={starting === c.id}
-      onOpen={() => onOpen(c)}
-      onStart={() => onStart(c)}
-    />
+  const sizeOf = (id: string) => asSize(prefs.home.sections.find((s) => s.id === id)?.size ?? "");
+  const setSize = (id: string) => (size: SectionSize) =>
+    save(
+      (p) =>
+        new Prefs({
+          ...p,
+          home: new HomePrefs({ ...p.home, sections: p.home.sections.map((s) => (s.id === id ? new HomeSection({ ...s, size }) : s)) }),
+        }),
+    );
+  const collection = { starting, shortcut, pinned: (c: Cue) => prefs.pinned.includes(c.id), onOpen, onStart };
+
+  const empty = (text: string) => (
+    <p className="rounded-2xl border border-dashed border-hairline px-4 py-5 text-center text-[12.5px] text-graphite">{text}</p>
   );
 
   const sections: Record<string, ReactNode> = {
-    suggestions: (
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {examplePrompts.map((ex) => (
-          <button
-            key={ex.label}
-            title={ex.text}
-            onClick={() => (ai?.ready ? composer.current?.setText(ex.text) : onConnect(ex.text))}
-            className="rounded-full border border-hairline bg-surface px-3.5 py-1.5 text-[12.5px] text-graphite transition-colors hover:border-red-text/30 hover:text-ink"
-          >
-            {ex.label}
-          </button>
-        ))}
-      </div>
-    ),
     pinned:
-      pinned.length > 0 ? (
-        <Section title="Pinned">
-          <Grid>{pinned.map(card)}</Grid>
-        </Section>
-      ) : cues.length > 0 ? (
-        <Section title="Pinned">
-          <p className="rounded-2xl border border-dashed border-hairline px-4 py-5 text-center text-[12.5px] text-graphite">
-            Pin the Cues you use most to keep them here and give them the first ⌘ numbers. Open a Cue and choose Pin, or press ⇧⌘P.
-          </p>
+      cues.length > 0 ? (
+        <Section title="Pinned" size={sizeOf("pinned")} onSize={setSize("pinned")}>
+          {pinned.length > 0
+            ? <CueCollection cues={pinned} size={sizeOf("pinned")} {...collection} />
+            : empty("Pin the Cues you use most to keep them here and give them the first ⌘ numbers. Open a Cue and choose Pin, or press ⇧⌘P.")}
         </Section>
       ) : null,
     recent:
-      recent.length > 0 ? (
+      cues.length > 0 ? (
         <Section
           title="Recently Used"
+          size={sizeOf("recent")}
+          onSize={setSize("recent")}
           trailing={
             used.length > recent.length && (
               <button onClick={onRecents} className="text-[12px] font-medium text-red-text hover:underline">
@@ -146,13 +133,7 @@ export const Home = forwardRef<
             )
           }
         >
-          <RecentList cues={recent} starting={starting} shortcut={shortcut} onOpen={onOpen} onStart={onStart} />
-        </Section>
-      ) : cues.length > 0 ? (
-        <Section title="Recently Used">
-          <p className="rounded-2xl border border-dashed border-hairline px-4 py-5 text-center text-[12.5px] text-graphite">
-            Cues you start show up here, newest first.
-          </p>
+          {recent.length > 0 ? <CueCollection cues={recent} size={sizeOf("recent")} recent {...collection} /> : empty("Cues you start show up here, newest first.")}
         </Section>
       ) : null,
   };
@@ -162,7 +143,7 @@ export const Home = forwardRef<
       <Toolbar
         trailing={
           <>
-          <Button variant="ghost" size="sm" onClick={() => onNewBlank()} title="Create a Cue Manually (⌥⌘N)">
+          <Button variant="secondary" size="sm" onClick={() => onNewBlank()} title="Create a Cue Manually (⌥⌘N)">
             <Plus className="size-3.5" />
             Create Manually
           </Button>
@@ -188,6 +169,7 @@ export const Home = forwardRef<
             busy={flow.busy === "compose"}
             busyLabel={flow.status || undefined}
             commands={homeCommands}
+            ideas={hasProposal ? [] : composerIdeas}
             status={status}
             placeholder={hasProposal ? "Describe a different Cue" : "Work on Atlas: my GitHub repo, my IDE, Claude and localhost"}
             onSubmit={run}
@@ -196,13 +178,14 @@ export const Home = forwardRef<
           />
 
           {!hasProposal && !flow.busy && (
-            <div className="mt-3 flex items-center justify-center gap-2 text-[12.5px] text-graphite">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-[13.5px] text-graphite">
               <span>Prefer to pick everything yourself?</span>
               <button
                 onClick={() => onNewBlank()}
-                className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface px-3 py-1 font-medium text-ink transition-colors hover:border-red-text/30"
+                title="Create a Cue Manually (⌥⌘N)"
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-5 text-[14px] font-semibold text-ink shadow-card transition-[border-color,transform] duration-150 hover:-translate-y-px hover:border-red-text/40"
               >
-                <Plus className="size-3.5" />
+                <Plus className="size-4 text-red-text" strokeWidth={2.25} />
                 Create Manually
               </button>
             </div>
@@ -247,11 +230,28 @@ export const Home = forwardRef<
   );
 });
 
-function Section({ title, trailing, children }: { title: string; trailing?: ReactNode; children: ReactNode }) {
+/** A titled Home section. Hovering its title shows the size control. */
+function Section({
+  title,
+  size,
+  onSize,
+  trailing,
+  children,
+}: {
+  title: string;
+  size: SectionSize;
+  onSize: (s: SectionSize) => void;
+  trailing?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <section>
-      <div className="mb-3 flex items-baseline justify-between px-1">
+    <section className="group/section">
+      <div className="mb-3 flex h-7 items-center gap-3 px-1">
         <h2 className="text-[13px] font-semibold">{title}</h2>
+        <div className="opacity-0 transition-opacity group-hover/section:opacity-100 has-[:focus-visible]:opacity-100">
+          <SizePicker value={size} onChange={onSize} compact label={`${title} size`} />
+        </div>
+        <div className="flex-1" />
         {trailing}
       </div>
       {children}
@@ -259,66 +259,3 @@ function Section({ title, trailing, children }: { title: string; trailing?: Reac
   );
 }
 
-export function Grid({ children }: { children: ReactNode }) {
-  return <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">{children}</div>;
-}
-
-export function CueCard({
-  cue,
-  shortcut,
-  pinned,
-  starting,
-  onOpen,
-  onStart,
-  trailing,
-}: {
-  cue: Cue;
-  shortcut?: string;
-  pinned?: boolean;
-  starting: boolean;
-  onOpen: () => void;
-  onStart: () => void;
-  trailing?: ReactNode;
-}) {
-  const count = cue.resources.filter((r) => !r.disabled).length;
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && onOpen()}
-      className="group relative flex flex-col rounded-2xl border border-hairline bg-surface p-3.5 shadow-card transition-transform duration-150 hover:-translate-y-px"
-    >
-      <div className="flex items-center gap-2.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-fill text-[18px]">{cue.icon || "◌"}</span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-[14px] font-semibold tracking-[-0.01em]">{cue.name}</span>
-            {pinned && <Pin className="size-3 shrink-0 fill-current text-faint" aria-label="Pinned" />}
-          </div>
-          <div className="truncate text-[11.5px] text-graphite">
-            {count} item{count === 1 ? "" : "s"}
-            {cue.lastRunAt && ` · ${timeAgo(cue.lastRunAt)}`}
-          </div>
-        </div>
-        {trailing}
-      </div>
-      <Button
-        variant="secondary"
-        size="sm"
-        className="mt-3.5 w-full group-hover:bg-red group-hover:text-white"
-        busy={starting}
-        disabled={count === 0}
-        title={shortcut ? `Start Cue (${shortcut})` : "Start Cue"}
-        onClick={(e) => {
-          e.stopPropagation();
-          onStart();
-        }}
-      >
-        Start Cue
-        {!starting && <ArrowRight className="size-3.5" />}
-        {shortcut && !starting && <span className="pl-1 text-[10.5px] font-medium opacity-60">{shortcut}</span>}
-      </Button>
-    </div>
-  );
-}

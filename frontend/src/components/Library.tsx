@@ -2,7 +2,7 @@ import { Pin, PinOff, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { displayName, shortcutOrder, type Cue } from "../api";
 import { usePrefs } from "../prefs";
-import { CueCard, Grid } from "./Home";
+import { CueCard, Grid } from "./HomeWidgets";
 import { Toolbar } from "./Toolbar";
 import { Button, IconButton } from "./ui";
 

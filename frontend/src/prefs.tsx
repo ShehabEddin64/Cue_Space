@@ -9,9 +9,8 @@ export const defaultPrefs = new Prefs({
     greeting: "",
     recentCount: 6,
     sections: [
-      new HomeSection({ id: "suggestions", visible: true }),
-      new HomeSection({ id: "pinned", visible: true }),
-      new HomeSection({ id: "recent", visible: true }),
+      new HomeSection({ id: "pinned", visible: true, size: "medium" }),
+      new HomeSection({ id: "recent", visible: true, size: "medium" }),
     ],
   }),
 });
@@ -50,11 +49,26 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     else root.setAttribute("data-theme", prefs.appearance);
   }, [prefs.appearance]);
 
-  const save = useCallback(async (change: (p: Prefs) => Prefs) => {
+  // Saves run one at a time, in order, so quick changes (like clicking
+  // through sizes) can't land out of order and leave an older value stored.
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const latest = useRef(0);
+  const save = useCallback((change: (p: Prefs) => Prefs) => {
     const next = change(current.current);
     current.current = next;
     setPrefs(next); // show it immediately
-    setPrefs(await PrefsService.SavePrefs(next)); // then what was stored
+    const n = ++latest.current;
+    queue.current = queue.current
+      .then(() => PrefsService.SavePrefs(next))
+      .then((stored) => {
+        // Then show what was stored, unless a newer change is on its way.
+        if (n === latest.current) {
+          current.current = stored;
+          setPrefs(stored);
+        }
+      })
+      .catch(() => {});
+    return queue.current;
   }, []);
 
   const togglePin = useCallback(

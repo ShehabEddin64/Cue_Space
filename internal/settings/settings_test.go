@@ -15,7 +15,7 @@ func TestLoadSave(t *testing.T) {
 	if err != nil || s.AI.Provider != "" {
 		t.Fatalf("defaults = %+v, %v", s, err)
 	}
-	if s.Prefs.Appearance != "system" || len(s.Prefs.Home.Sections) != 3 || s.Prefs.Home.RecentCount != 6 {
+	if s.Prefs.Appearance != "system" || len(s.Prefs.Home.Sections) != 2 || s.Prefs.Home.RecentCount != 6 {
 		t.Errorf("default prefs = %+v", s.Prefs)
 	}
 	s.AI = ai.Config{Provider: ai.ProviderOpenAI, Model: "llama3.2", BaseURL: "http://localhost:11434/v1"}
@@ -33,7 +33,7 @@ func TestNormalizePrefs(t *testing.T) {
 		Appearance: "purple",
 		Pinned:     []string{"a", "", "a", "b"},
 		Home: HomePrefs{
-			Sections:    []HomeSection{{"recent", false}, {"bogus", true}, {"recent", true}},
+			Sections:    []HomeSection{{"recent", false, "large"}, {"bogus", true, ""}, {"recent", true, ""}},
 			RecentCount: 99,
 		},
 	}
@@ -44,7 +44,7 @@ func TestNormalizePrefs(t *testing.T) {
 	if !reflect.DeepEqual(p.Pinned, []string{"a", "b"}) {
 		t.Errorf("pinned = %v", p.Pinned)
 	}
-	want := []HomeSection{{"recent", false}, {"suggestions", true}, {"pinned", true}}
+	want := []HomeSection{{"recent", false, "large"}, {"pinned", true, "medium"}}
 	if !reflect.DeepEqual(p.Home.Sections, want) {
 		t.Errorf("sections = %v", p.Home.Sections)
 	}
