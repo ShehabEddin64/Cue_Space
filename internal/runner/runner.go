@@ -123,6 +123,9 @@ func (r *Runner) Run(ctx context.Context, c cue.Cue) Result {
 
 // arrange sets up each desktop of the layout.
 func (r *Runner) arrange(ctx context.Context, c cue.Cue, res *Result, timeout time.Duration) {
+	if b, ok := r.Arranger.(interface{ BeginRun() }); ok {
+		b.BeginRun()
+	}
 	byID := map[string]cue.Resource{}
 	for _, rsc := range c.Resources {
 		byID[rsc.ID] = rsc

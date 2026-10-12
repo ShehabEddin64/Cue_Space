@@ -62,3 +62,11 @@ func TestCleanOpenError(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestAppleScriptString(t *testing.T) {
+	got := appleScriptString(`https://a.b/?q="x"&p=\y`)
+	want := `https://a.b/?q=\"x\"&p=\\y`
+	if got != want {
+		t.Errorf("got %s, want %s", got, want)
+	}
+}

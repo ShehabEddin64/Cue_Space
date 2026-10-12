@@ -116,6 +116,14 @@ static AXUIElementRef cs_new_window(int pid, CFArrayRef before, int fallback) {
 	return found;
 }
 
+static int cs_equal(CFTypeRef a, CFTypeRef b) {
+	return (a && b && CFEqual(a, b)) ? 1 : 0;
+}
+
+static CFTypeRef cs_retain(CFTypeRef ref) {
+	return ref ? CFRetain(ref) : NULL;
+}
+
 static void cs_release(CFTypeRef ref) {
 	if (ref) CFRelease(ref);
 }
@@ -288,6 +296,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -315,6 +324,27 @@ type Arranger struct {
 	// LogDir, when set, receives a Dock accessibility dump if Mission Control
 	// can't be driven (useful after macOS updates).
 	LogDir string
+
+	// Windows already placed in the current run, so one window is never
+	// moved into two slots.
+	placed []C.CFTypeRef
+}
+
+// BeginRun forgets the windows placed by the previous run.
+func (a *Arranger) BeginRun() {
+	for _, w := range a.placed {
+		C.cs_release(w)
+	}
+	a.placed = nil
+}
+
+func (a *Arranger) alreadyPlaced(win C.AXUIElementRef) bool {
+	for _, w := range a.placed {
+		if C.cs_equal(w, C.CFTypeRef(win)) == 1 {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *Arranger) Ready() bool { return AccessibilityTrusted(false) }
@@ -390,7 +420,8 @@ func (a *Arranger) Place(ctx context.Context, rsc cue.Resource, path string, slo
 	}
 	space := C.cs_active_space()
 
-	if err := a.open(ctx, rsc, path); err != nil {
+	openNote, err := a.open(ctx, rsc, path, bundle)
+	if err != nil {
 		return "", err
 	}
 
@@ -419,7 +450,12 @@ func (a *Arranger) Place(ctx context.Context, rsc cue.Resource, path string, slo
 	}
 	defer C.cs_release(C.CFTypeRef(win))
 
-	note := ""
+	if a.alreadyPlaced(win) {
+		return joinNote(openNote, "opened in a window that already holds an earlier item, so it wasn't moved"), nil
+	}
+	a.placed = append(a.placed, C.cs_retain(C.CFTypeRef(win)))
+
+	note := openNote
 	// Only an app that was already running can have pulled us to another
 	// desktop; a fresh launch can switch away from a full-screen space too.
 	if wasRunning && C.cs_active_space() != space {
@@ -471,15 +507,49 @@ func near(a, b float64) bool {
 	return d > -3 && d < 3
 }
 
-func (a *Arranger) open(ctx context.Context, rsc cue.Resource, path string) error {
+// open opens rsc so that it gets a window of its own. Links normally open
+// as tabs in the browser's front window, so ask the browser for a new window.
+func (a *Arranger) open(ctx context.Context, rsc cue.Resource, path, browser string) (string, error) {
 	switch rsc.Type {
 	case cue.TypeURL:
-		return a.Launcher.OpenURL(ctx, rsc.URL)
+		return a.openURLInNewWindow(ctx, rsc.URL, browser)
 	case cue.TypeApp:
-		return a.Launcher.OpenApp(ctx, *rsc.App)
+		return "", a.Launcher.OpenApp(ctx, *rsc.App)
 	default:
-		return a.Launcher.OpenPath(ctx, path, rsc.OpenWith)
+		return "", a.Launcher.OpenPath(ctx, path, rsc.OpenWith)
 	}
+}
+
+var chromiumBrowsers = map[string]bool{
+	"com.google.Chrome": true, "com.google.Chrome.beta": true, "com.microsoft.edgemac": true,
+	"com.brave.Browser": true, "org.chromium.Chromium": true, "com.vivaldi.Vivaldi": true,
+	"com.operasoftware.Opera": true,
+}
+
+func (a *Arranger) openURLInNewWindow(ctx context.Context, link, browser string) (string, error) {
+	switch {
+	case browser == "com.apple.Safari":
+		// Needs Automation permission (asked once). Falls back to a tab.
+		script := fmt.Sprintf(`tell application id "com.apple.Safari"
+	make new document with properties {URL:"%s"}
+	activate
+end tell`, appleScriptString(link))
+		if err := exec.CommandContext(ctx, "osascript", "-e", script).Run(); err == nil {
+			return "", nil
+		}
+		return "opened as a tab: allow Cue Space to control Safari (System Settings › Privacy & Security › Automation) to give each link its own window",
+			a.Launcher.OpenURL(ctx, link)
+	case chromiumBrowsers[browser]:
+		return "", exec.CommandContext(ctx, "open", "-na", "-b", browser, "--args", "--new-window", link).Run()
+	case browser == "org.mozilla.firefox":
+		return "", exec.CommandContext(ctx, "open", "-na", "-b", browser, "--args", "-new-window", link).Run()
+	}
+	return "", a.Launcher.OpenURL(ctx, link)
+}
+
+func appleScriptString(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	return strings.ReplaceAll(s, `"`, `\"`)
 }
 
 // targetApp is the app whose window will hold rsc.

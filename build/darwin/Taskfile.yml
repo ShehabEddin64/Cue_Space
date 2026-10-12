@@ -189,7 +189,9 @@ tasks:
         if [ -d "$APP/Contents/PlugIns/CueSpaceWidgets.appex" ]; then
           codesign --force --sign - --entitlements build/darwin/widgets/widgets.entitlements "$APP/Contents/PlugIns/CueSpaceWidgets.appex"
         fi
-      - codesign --force --sign - "{{.BIN_DIR}}/{{.APP_NAME}}.app"
+      # A designated requirement based on the bundle id (not the build's hash)
+      # lets macOS privacy permissions such as Accessibility survive rebuilds.
+      - codesign --force --sign - -r build/darwin/designated.req "{{.BIN_DIR}}/{{.APP_NAME}}.app"
       - codesign --verify --deep --strict "{{.BIN_DIR}}/{{.APP_NAME}}.app"
 
   codesign:skip:

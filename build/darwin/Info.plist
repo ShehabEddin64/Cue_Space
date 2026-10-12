@@ -23,6 +23,8 @@
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
             <string>© 2026, Cue Space contributors</string>
+        <key>NSAppleEventsUsageDescription</key>
+        <string>Cue Space opens each link in a desktop layout in its own browser window.</string>
         <key>CFBundleURLTypes</key>
         <array>
             <dict>

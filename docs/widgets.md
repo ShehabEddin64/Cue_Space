@@ -30,11 +30,12 @@ Cue Space.app (Go)
 | `build/darwin/widgets/widgets.entitlements` | Sandbox, plus read-only access to `~/Library/Application Support/CueSpace/` |
 | `services/widget.go` | Writes the snapshot (debounced) when Cues or pins change |
 
-`wails3 task darwin:package` builds everything. It needs only the Xcode command line tools, not full Xcode. Signing goes inside-out: the helper, then the extension with its entitlements, then the app (no `--deep`, which would strip the extension's sandbox entitlements).
+`wails3 task darwin:package` builds everything. It needs only the Xcode command line tools, not full Xcode. The extension is linked with `-e _NSExtensionMain`, as Xcode does for extensions: with Swift's own `main` the process starts and immediately exits, and WidgetKit logs "query failed … connection invalidated". Signing goes inside-out: the helper, then the extension with its entitlements, then the app (no `--deep`, which would strip the extension's sandbox entitlements).
 
 ## Notes and limits
 
 - **Data sharing without an App Group.** App Groups need an Apple Developer Team ID. Instead, the sandboxed extension has a read-only exception for the Cue Space data folder. That's fine outside the Mac App Store; an App Store build would switch to an App Group container.
+- **Debugging.** Use `/usr/bin/log show --last 5m --predicate 'eventMessage CONTAINS "space.cue.app.widgets"'` (the full path matters: zsh has its own `log` command). "Reload success" from `chronod` means WidgetKit loaded the widget.
 - **Development builds.** The app is ad-hoc signed. If the widget doesn't appear in the gallery after a rebuild, register the extension again:
 
   ```bash

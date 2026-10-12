@@ -28,6 +28,8 @@
             <key>NSAllowsLocalNetworking</key>
             <true/>
         </dict>
+        <key>NSAppleEventsUsageDescription</key>
+        <string>Cue Space opens each link in a desktop layout in its own browser window.</string>
         <key>CFBundleURLTypes</key>
         <array>
             <dict>

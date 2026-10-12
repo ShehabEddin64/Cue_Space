@@ -19,9 +19,12 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 for arch in arm64 x86_64; do
+  # Start at NSExtensionMain like Xcode-built extensions: it keeps the
+  # process alive and answers WidgetKit. Swift's own main would just return.
   swiftc -parse-as-library -application-extension \
     -target "$arch-apple-macos14.0" -sdk "$SDK" -O \
     -module-name CueSpaceWidgets \
+    -Xlinker -e -Xlinker _NSExtensionMain \
     "$ROOT/widgets/CueSpaceWidgets.swift" \
     -o "$WORK/CueSpaceWidgets-$arch"
 done
