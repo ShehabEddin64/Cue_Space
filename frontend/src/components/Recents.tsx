@@ -1,5 +1,6 @@
 import { ArrowRight, Clock } from "lucide-react";
 import { recentGroup, recentlyUsed, startedLabel, type Cue } from "../api";
+import { t, tn } from "../i18n";
 import { Toolbar } from "./Toolbar";
 import { Button, InsetList, SectionTitle } from "./ui";
 
@@ -35,7 +36,7 @@ export function RecentList({
             <div className="min-w-0 flex-1">
               <div className="truncate text-[13.5px] font-semibold tracking-[-0.01em]">{c.name}</div>
               <div className="truncate text-[11.5px] text-graphite">
-                {c.lastRunAt ? `Started ${startedLabel(c.lastRunAt)}` : "Never started"} · {count} item{count === 1 ? "" : "s"}
+                {c.lastRunAt ? t("Started {time}", { time: startedLabel(c.lastRunAt) }) : t("Never started")} · {tn(count, "{n} item", "{n} items")}
               </div>
             </div>
             {key && starting !== c.id && <span className="text-[10.5px] font-medium text-faint">{key}</span>}
@@ -45,13 +46,13 @@ export function RecentList({
               className="group-hover:bg-red group-hover:text-white"
               busy={starting === c.id}
               disabled={count === 0}
-              title={key ? `Start Cue (${key})` : "Start Cue"}
+              title={key ? t("Start Cue ({shortcut})", { shortcut: key }) : t("Start Cue")}
               onClick={(e) => {
                 e.stopPropagation();
                 onStart(c);
               }}
             >
-              Start
+              {t("Start")}
               {starting !== c.id && <ArrowRight className="size-3.5" />}
             </Button>
           </li>
@@ -87,17 +88,17 @@ export function Recents({
 
   return (
     <div className="flex h-full flex-col">
-      <Toolbar title="Recently Used" />
+      <Toolbar title={t("Recently Used")} />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[720px] px-8 pb-16 pt-2">
           {recent.length === 0 ? (
             <div className="mx-auto max-w-sm py-16 text-center">
               <Clock className="mx-auto size-8 text-faint" strokeWidth={1.5} />
-              <h2 className="mt-3 text-[17px] font-semibold">Nothing started yet</h2>
-              <p className="mt-1.5 text-[13px] text-graphite">Cues you start show up here, newest first.</p>
+              <h2 className="mt-3 text-[17px] font-semibold">{t("Nothing started yet")}</h2>
+              <p className="mt-1.5 text-[13px] text-graphite">{t("Cues you start show up here, newest first.")}</p>
               {cues.length > 0 && (
                 <Button className="mt-5" onClick={onLibrary}>
-                  Show All Cues
+                  {t("Show All Cues")}
                 </Button>
               )}
             </div>

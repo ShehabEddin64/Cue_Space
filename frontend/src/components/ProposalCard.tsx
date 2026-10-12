@@ -9,9 +9,11 @@ import {
   Resource,
   ResourceType,
   SystemService,
+  type Problem,
   type AISettings,
   type Proposal,
 } from "../api";
+import { t, tn } from "../i18n";
 import { applyEdit, parseCommand } from "../commands";
 import { AppPicker } from "./AppPicker";
 import { Button, CueMark, Input, TypeIcon } from "./ui";
@@ -53,7 +55,8 @@ export function ProposalCard({
   onRefine: (text: string) => void;
   onUndo: () => void;
 }) {
-  const [problems, setProblems] = useState<string[]>([]);
+  const [problemList, setProblems] = useState<Problem[]>([]);
+  const problems = problemList.map((p) => p.message);
   const [refineText, setRefineText] = useState("");
   const [refineNote, setRefineNote] = useState("");
   const [localBusy, setLocalBusy] = useState(false);
@@ -66,7 +69,7 @@ export function ProposalCard({
     setLocalBusy(true);
     try {
       const res = await applyEdit(cue, text, ai);
-      if (!res) return setRefineNote("That command doesn’t work here. Try /add, /remove, /off, /on, /rename or /icon.");
+      if (!res) return setRefineNote(t("That command doesn’t work here. Try /add, /remove, /off, /on, /rename or /icon."));
       setRefineNote(res.message);
       if (res.changed) onChange({ ...proposal, cue: res.cue, questions: { ...proposal.questions, ...res.questions } });
     } finally {
@@ -75,8 +78,8 @@ export function ProposalCard({
   };
 
   useEffect(() => {
-    const t = setTimeout(() => CueService.Problems(cue).then(setProblems), 200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => CueService.Problems(cue).then(setProblems), 200);
+    return () => clearTimeout(timer);
   }, [cue]);
 
   const setCue = (patch: Partial<Cue>) => onChange({ ...proposal, cue: new Cue({ ...cue, ...patch }) });
@@ -95,23 +98,27 @@ export function ProposalCard({
 
   return (
     <section
-      aria-label="Proposed Cue"
+      aria-label={t("Proposed Cue")}
       className="animate-pop-in overflow-hidden rounded-[22px] border border-hairline bg-surface shadow-composer"
     >
       {/* Who made this, and that it is a proposal. */}
       <header className="flex items-center justify-between gap-3 px-5 pt-4">
         <div className="flex items-center gap-2 text-[12px] font-medium text-graphite">
           <CueMark size={14} />
-          {mode === "new" ? "Proposed Cue" : "Proposed changes"}
-          {updated && <span className="animate-pop-in rounded-full bg-red-tint px-2 py-px text-[11px] text-red-on-tint">Updated</span>}
+          {mode === "new" ? t("Proposed Cue") : t("Proposed changes")}
+          {updated && <span className="animate-pop-in rounded-full bg-red-tint px-2 py-px text-[11px] text-red-on-tint">{t("Updated")}</span>}
         </div>
         {(proposal.model || ai?.disclosure.model) && (
           <span
             className="truncate text-[11px] text-faint"
-            title={proposal.model ? `${ai?.disclosure.model ?? "Your model"} was busy, so ${proposal.model} answered instead.` : undefined}
+            title={
+              proposal.model
+                ? t("{model} was busy, so {backup} answered instead.", { model: ai?.disclosure.model ?? t("Your model"), backup: proposal.model })
+                : undefined
+            }
           >
-            Made with {proposal.model || ai?.disclosure.model}
-            {proposal.model && " (backup)"}
+            {t("Made with {model}", { model: proposal.model || ai?.disclosure.model || "" })}
+            {proposal.model && ` (${t("backup")})`}
           </span>
         )}
       </header>
@@ -123,15 +130,15 @@ export function ProposalCard({
           <input
             value={cue.name}
             onChange={(e) => setCue({ name: e.target.value })}
-            aria-label="Name"
+            aria-label={t("Name")}
             spellCheck={false}
             className="w-full bg-transparent text-[19px] font-semibold tracking-[-0.015em] focus:outline-none"
           />
           <input
             value={cue.description || ""}
             onChange={(e) => setCue({ description: e.target.value })}
-            aria-label="Description"
-            placeholder="Add a description"
+            aria-label={t("Description")}
+            placeholder={t("Add a description")}
             className="w-full bg-transparent text-[13px] text-graphite placeholder:text-faint focus:outline-none"
           />
         </div>
@@ -149,7 +156,7 @@ export function ProposalCard({
             onRemove={() => removeResource(i)}
           />
         ))}
-        {cue.resources.length === 0 && <li className="px-4 py-4 text-[13px] text-graphite">Nothing to open yet.</li>}
+        {cue.resources.length === 0 && <li className="px-4 py-4 text-[13px] text-graphite">{t("Nothing to open yet.")}</li>}
       </ol>
 
       {proposal.notes && (
@@ -171,8 +178,8 @@ export function ProposalCard({
             }
           }}
           disabled={refining || localBusy}
-          placeholder="Refine: /add figma, /remove localhost, or describe a change"
-          aria-label="Refine the proposal"
+          placeholder={t("Refine: /add figma, /remove localhost, or describe a change")}
+          aria-label={t("Refine the proposal")}
           className="h-9 flex-1 bg-transparent text-[13px] placeholder:text-faint focus:outline-none"
         />
         {refining || localBusy ? (
@@ -188,28 +195,28 @@ export function ProposalCard({
 
       <footer className="flex flex-wrap items-center gap-2 border-t border-hairline bg-canvas/50 px-5 py-3.5">
         <Button variant="primary" onClick={onSave} disabled={blocked || refining} title={blocked ? problems.join("\n") : undefined}>
-          {mode === "new" ? "Save Cue" : "Save Changes"}
+          {mode === "new" ? t("Save Cue") : t("Save Changes")}
         </Button>
         <Button onClick={onEdit} disabled={refining}>
-          Edit Details
+          {t("Edit Details")}
         </Button>
-        <Button variant="ghost" onClick={onRetry} disabled={refining} title="Ask again with the same description">
+        <Button variant="ghost" onClick={onRetry} disabled={refining} title={t("Ask again with the same description")}>
           <RotateCcw className="size-3.5" />
-          Try Again
+          {t("Try Again")}
         </Button>
         {canUndo && (
           <Button variant="ghost" onClick={onUndo} disabled={refining}>
             <Undo2 className="size-3.5" />
-            Undo
+            {t("Undo")}
           </Button>
         )}
         <div className="flex-1" />
         <Button variant="ghost" onClick={onDiscard}>
-          Discard
+          {t("Discard")}
         </Button>
         {(open > 0 || blocked) && (
           <p className="w-full pt-1 text-[12px] text-graphite">
-            {open > 0 ? `${open} item${open === 1 ? " needs" : "s need"} your input before saving.` : problems[0]}
+            {open > 0 ? tn(open, "{n} item needs your input before saving.", "{n} items need your input before saving.") : problems[0]}
           </p>
         )}
       </footer>
@@ -243,7 +250,7 @@ function ProposalRow({
       ? r.url
       : r.type === ResourceType.TypeApp
         ? r.app?.name
-        : [r.path, r.openWith?.name && `in ${r.openWith.name}`].filter(Boolean).join(" ");
+        : [r.path, r.openWith?.name && t("in {app}", { app: r.openWith.name })].filter(Boolean).join(" ");
 
   const choosePath = async () => {
     const p = r.type === ResourceType.TypeFolder ? await SystemService.ChooseFolder() : await SystemService.ChooseFile();
@@ -263,8 +270,8 @@ function ProposalRow({
         </div>
         <button
           onClick={onRemove}
-          aria-label={`Remove ${displayName(r)}`}
-          title="Remove"
+          aria-label={t("Remove {name}", { name: displayName(r) })}
+          title={t("Remove")}
           className="flex size-6 items-center justify-center rounded-full text-faint opacity-0 transition hover:bg-fill hover:text-ink focus:opacity-100 group-hover:opacity-100"
         >
           <Minus className="size-3.5" />
@@ -291,9 +298,9 @@ function ProposalRow({
             {isPath && (
               <>
                 <Button variant="tinted" onClick={choosePath}>
-                  Choose {r.type === ResourceType.TypeFolder ? "Folder" : "File"}…
+                  {r.type === ResourceType.TypeFolder ? t("Choose Folder…") : t("Choose File…")}
                 </Button>
-                <AppPicker value={r.openWith} onChange={(openWith) => update({ openWith })} placeholder="Open with default app" clearable />
+                <AppPicker value={r.openWith} onChange={(openWith) => update({ openWith })} placeholder={t("Open with default app")} clearable />
               </>
             )}
             {r.type === ResourceType.TypeApp && <AppPicker value={r.app} onChange={(app) => app && update({ app })} />}

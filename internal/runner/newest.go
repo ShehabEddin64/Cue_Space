@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"fmt"
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -48,11 +48,10 @@ func NewestFile(dir string, exts []string) (string, error) {
 		}
 	}
 	if best == "" {
-		what := "files"
 		if len(exts) > 0 {
-			what = strings.ToUpper(strings.Join(exts, "/")) + " files"
+			return "", i18n.Errorf("no %s files in %s", strings.ToUpper(strings.Join(exts, "/")), filepath.Base(dir))
 		}
-		return "", fmt.Errorf("no %s in %s", what, filepath.Base(dir))
+		return "", i18n.Errorf("no files in %s", filepath.Base(dir))
 	}
 	return filepath.Join(dir, best), nil
 }

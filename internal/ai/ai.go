@@ -8,6 +8,8 @@ import (
 	"errors"
 	"net/url"
 	"strings"
+
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 // Request is one structured completion: the model must answer with JSON that
@@ -64,7 +66,7 @@ func New(cfg Config, apiKey string) (Provider, error) {
 	switch cfg.Provider {
 	case ProviderAnthropic:
 		if apiKey == "" {
-			return nil, errors.New("add your Anthropic API key in Settings")
+			return nil, i18n.Errorf("Add your Anthropic API key in Settings.")
 		}
 		model := cfg.Model
 		if model == "" {
@@ -73,7 +75,7 @@ func New(cfg Config, apiKey string) (Provider, error) {
 		return NewAnthropic(apiKey, model, cfg.BaseURL), nil
 	case ProviderGemini:
 		if apiKey == "" {
-			return nil, errors.New("add your Gemini API key in Settings (free at aistudio.google.com)")
+			return nil, i18n.Errorf("Add your Gemini API key in Settings (it’s free at aistudio.google.com).")
 		}
 		model := strings.TrimPrefix(cfg.Model, "models/")
 		if model == "" {
@@ -89,14 +91,14 @@ func New(cfg Config, apiKey string) (Provider, error) {
 		return p, nil
 	case ProviderOpenAI:
 		if cfg.BaseURL == "" {
-			return nil, errors.New("set the base URL of your OpenAI-compatible server in Settings")
+			return nil, i18n.Errorf("Set the address of your OpenAI-compatible server in Settings.")
 		}
 		if cfg.Model == "" {
-			return nil, errors.New("choose a model in Settings")
+			return nil, i18n.Errorf("Choose a model in Settings.")
 		}
 		return NewOpenAICompat(cfg.BaseURL, apiKey, cfg.Model), nil
 	case "":
-		return nil, ErrNotConfigured
+		return nil, i18n.Errorf("No AI is set up yet. Add one in Settings.")
 	}
 	return nil, errors.New("unknown AI provider " + cfg.Provider)
 }
@@ -130,7 +132,7 @@ func Describe(cfg Config) Disclosure {
 		return Disclosure{
 			Model:  prettyModel(strings.TrimPrefix(model, "models/")),
 			Vendor: "Google",
-			Note:   "On Google’s free tier, Google may use your requests to improve its products.",
+			Note:   i18n.T("On Google’s free tier, Google may use your requests to improve its products."),
 		}
 	case ProviderOpenAI:
 		d := Disclosure{Model: cfg.Model}

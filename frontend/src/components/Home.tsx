@@ -2,6 +2,7 @@ import { Plus, SlidersHorizontal } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from "react";
 import { composerIdeas, HomePrefs, HomeSection, Prefs, recentlyUsed, shortcutOrder, type AISettings, type Cue, type Proposal } from "../api";
 import { findCue, homeCommands, parseCommand } from "../commands";
+import { msg, t } from "../i18n";
 import { usePrefs } from "../prefs";
 import { useProposal } from "../useProposal";
 import { Composer, type ComposerHandle } from "./Composer";
@@ -12,7 +13,8 @@ import { AIErrorNotice, Button } from "./ui";
 
 export type HomeHandle = { focusComposer: (text?: string) => void; compose: (text: string) => void };
 
-export const DEFAULT_GREETING = "What do you want to do?";
+// The greeting when none is set; show it with t().
+export const DEFAULT_GREETING = msg("What do you want to do?");
 
 /**
  * Home leads with the composer: say what you want to do and Cue Space
@@ -66,7 +68,7 @@ export const Home = forwardRef<
     const done = () => composer.current?.clear();
     switch (cmd.name) {
       case "create":
-        if (!cmd.arg) return say("Say what the Cue is for, e.g. /create study math");
+        if (!cmd.arg) return say(t("Say what the Cue is for, e.g. /create study math"));
         if (!ai?.ready) return onConnect(cmd.arg);
         return flow.compose(cmd.arg);
       case "new":
@@ -75,7 +77,7 @@ export const Home = forwardRef<
       case "start":
       case "open": {
         const c = findCue(cues, cmd.arg);
-        if (!c) return say(cmd.arg ? `No Cue matches “${cmd.arg}”` : `Say which Cue, e.g. /${cmd.name} atlas`);
+        if (!c) return say(cmd.arg ? t("No Cue matches “{query}”", { query: cmd.arg }) : t("Say which Cue, e.g. /{command} atlas", { command: cmd.name }));
         done();
         return cmd.name === "start" ? onStart(c) : onOpen(c);
       }
@@ -83,7 +85,7 @@ export const Home = forwardRef<
         done();
         return onHelp();
     }
-    say(`There’s no /${cmd.name} here. Type / to see commands.`);
+    say(t("There’s no /{command} here. Type / to see commands.", { command: cmd.name }));
   };
 
   const order = shortcutOrder(cues, prefs.pinned);
@@ -113,27 +115,27 @@ export const Home = forwardRef<
   const sections: Record<string, ReactNode> = {
     pinned:
       cues.length > 0 ? (
-        <Section title="Pinned" size={sizeOf("pinned")} onSize={setSize("pinned")}>
+        <Section title={t("Pinned")} size={sizeOf("pinned")} onSize={setSize("pinned")}>
           {pinned.length > 0
             ? <CueCollection cues={pinned} size={sizeOf("pinned")} {...collection} />
-            : empty("Pin the Cues you use most to keep them here and give them the first ⌘ numbers. Open a Cue and choose Pin, or press ⇧⌘P.")}
+            : empty(t("Pin the Cues you use most to keep them here and give them the first ⌘ numbers. Open a Cue and choose Pin, or press ⇧⌘P."))}
         </Section>
       ) : null,
     recent:
       cues.length > 0 ? (
         <Section
-          title="Recently Used"
+          title={t("Recently Used")}
           size={sizeOf("recent")}
           onSize={setSize("recent")}
           trailing={
             used.length > recent.length && (
               <button onClick={onRecents} className="text-[12px] font-medium text-red-text hover:underline">
-                See All
+                {t("See All")}
               </button>
             )
           }
         >
-          {recent.length > 0 ? <CueCollection cues={recent} size={sizeOf("recent")} recent {...collection} /> : empty("Cues you start show up here, newest first.")}
+          {recent.length > 0 ? <CueCollection cues={recent} size={sizeOf("recent")} recent {...collection} /> : empty(t("Cues you start show up here, newest first."))}
         </Section>
       ) : null,
   };
@@ -143,13 +145,13 @@ export const Home = forwardRef<
       <Toolbar
         trailing={
           <>
-          <Button variant="secondary" size="sm" onClick={() => onNewBlank()} title="Create a Cue Manually (⌥⌘N)">
+          <Button variant="secondary" size="sm" onClick={() => onNewBlank()} title={t("Create a Cue Manually (⌥⌘N)")}>
             <Plus className="size-3.5" />
-            Create Manually
+            {t("Create Manually")}
           </Button>
-          <Button variant="ghost" size="sm" onClick={onCustomize} title="Customize Home">
+          <Button variant="ghost" size="sm" onClick={onCustomize} title={t("Customize Home")}>
             <SlidersHorizontal className="size-3.5" />
-            Customize
+            {t("Customize")}
           </Button>
           </>
         }
@@ -158,8 +160,8 @@ export const Home = forwardRef<
         <div className={`mx-auto w-full max-w-[720px] px-8 pb-16 ${hasProposal ? "pt-4" : "pt-[7vh]"}`}>
           {!hasProposal && (
             <header className="mb-7 text-center">
-              <h1 className="text-[34px] font-semibold leading-[1.1] tracking-[-0.03em]">{prefs.home.greeting || DEFAULT_GREETING}</h1>
-              <p className="mt-2.5 text-[15px] text-graphite">Describe it, and Cue Space gathers everything you need to start.</p>
+              <h1 className="text-[34px] font-semibold leading-[1.1] tracking-[-0.03em]">{prefs.home.greeting || t(DEFAULT_GREETING)}</h1>
+              <p className="mt-2.5 text-[15px] text-graphite">{t("Describe it, and Cue Space gathers everything you need to start.")}</p>
             </header>
           )}
 
@@ -169,9 +171,9 @@ export const Home = forwardRef<
             busy={flow.busy === "compose"}
             busyLabel={flow.status || undefined}
             commands={homeCommands}
-            ideas={hasProposal ? [] : composerIdeas}
+            ideas={hasProposal ? [] : composerIdeas()}
             status={status}
-            placeholder={hasProposal ? "Describe a different Cue" : "Work on Atlas: my GitHub repo, my IDE, Claude and localhost"}
+            placeholder={hasProposal ? t("Describe a different Cue") : t("Work on Atlas: my GitHub repo, my IDE, Claude and localhost")}
             onSubmit={run}
             onCancel={flow.cancel}
             onConnect={() => onConnect()}
@@ -179,14 +181,14 @@ export const Home = forwardRef<
 
           {!hasProposal && !flow.busy && (
             <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-[13.5px] text-graphite">
-              <span>Prefer to pick everything yourself?</span>
+              <span>{t("Prefer to pick everything yourself?")}</span>
               <button
                 onClick={() => onNewBlank()}
-                title="Create a Cue Manually (⌥⌘N)"
+                title={t("Create a Cue Manually (⌥⌘N)")}
                 className="inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-5 text-[14px] font-semibold text-ink shadow-card transition-[border-color,transform] duration-150 hover:-translate-y-px hover:border-red-text/40"
               >
                 <Plus className="size-4 text-red-text" strokeWidth={2.25} />
-                Create Manually
+                {t("Create Manually")}
               </button>
             </div>
           )}
@@ -249,7 +251,7 @@ function Section({
       <div className="mb-3 flex h-7 items-center gap-3 px-1">
         <h2 className="text-[13px] font-semibold">{title}</h2>
         <div className="opacity-0 transition-opacity group-hover/section:opacity-100 has-[:focus-visible]:opacity-100">
-          <SizePicker value={size} onChange={onSize} compact label={`${title} size`} />
+          <SizePicker value={size} onChange={onSize} compact label={t("{section} size", { section: title })} />
         </div>
         <div className="flex-1" />
         {trailing}

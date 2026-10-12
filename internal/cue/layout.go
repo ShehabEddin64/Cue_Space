@@ -1,7 +1,5 @@
 package cue
 
-import "fmt"
-
 // Arrangement is how windows share one desktop, mirroring macOS's own
 // Move & Resize and Fill & Arrange choices.
 type Arrangement string
@@ -127,15 +125,13 @@ func (c *Cue) normalizeLayout() {
 	}
 }
 
-func (c *Cue) validateLayout() []string {
+func (c *Cue) validateLayout(e *ValidationError) {
 	if c.Layout == nil {
-		return nil
+		return
 	}
-	var p []string
 	for i, d := range c.Layout.Desktops {
 		if _, ok := ArrangementByID(d.Arrangement); !ok {
-			p = append(p, fmt.Sprintf("desktop %d: unknown arrangement %q", i+1, d.Arrangement))
+			e.add(false, "desktop %d: unknown arrangement %q", i+1, d.Arrangement)
 		}
 	}
-	return p
 }

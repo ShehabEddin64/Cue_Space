@@ -1,20 +1,22 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { HomePrefs, HomeSection, Prefs } from "../api";
+import { msg, t } from "../i18n";
 import { defaultPrefs, usePrefs } from "../prefs";
 import { DEFAULT_GREETING } from "./Home";
 import { asSize, SizeGlyph, SizePicker, type SectionSize } from "./HomeWidgets";
 import { Button, IconButton, Input, Label, Sheet } from "./ui";
 
+// English; shown with t().
 const sectionInfo: Record<string, { title: string; detail: string; sizes: Record<SectionSize, string> }> = {
   pinned: {
-    title: "Pinned",
-    detail: "The Cues you pin, with ⌘1, ⌘2…",
-    sizes: { small: "Compact tiles, many per row", medium: "Cards with a Start button", large: "Cards that list what opens" },
+    title: msg("Pinned"),
+    detail: msg("The Cues you pin, with ⌘1, ⌘2…"),
+    sizes: { small: msg("Compact tiles, many per row"), medium: msg("Cards with a Start button"), large: msg("Cards that list what opens") },
   },
   recent: {
-    title: "Recently Used",
-    detail: "The Cues you started last, newest first",
-    sizes: { small: "Compact tiles, many per row", medium: "A list with start times", large: "Cards that list what opens" },
+    title: msg("Recently Used"),
+    detail: msg("The Cues you started last, newest first"),
+    sizes: { small: msg("Compact tiles, many per row"), medium: msg("A list with start times"), large: msg("Cards that list what opens") },
   },
 };
 
@@ -36,33 +38,34 @@ export function CustomizeHome({ onClose }: { onClose: () => void }) {
 
   return (
     <Sheet
-      title="Customize Home"
+      title={t("Customize Home")}
       width="max-w-xl"
       onClose={onClose}
       footer={
         <>
           <Button variant="ghost" className="mr-auto" onClick={() => setHome(defaultPrefs.home)}>
-            Restore Defaults
+            {t("Restore Defaults")}
           </Button>
           <Button variant="primary" onClick={onClose}>
-            Done
+            {t("Done")}
           </Button>
         </>
       }
     >
       <section>
-        <Label hint="Leave empty for the default">Greeting</Label>
-        <Input value={home.greeting} onChange={(e) => setHome({ greeting: e.target.value })} placeholder={DEFAULT_GREETING} maxLength={60} />
+        <Label hint={t("Leave empty for the default")}>{t("Greeting")}</Label>
+        <Input value={home.greeting} onChange={(e) => setHome({ greeting: e.target.value })} placeholder={t(DEFAULT_GREETING)} maxLength={60} />
       </section>
 
       <section className="mt-5">
-        <Label hint="The composer always comes first">Sections</Label>
+        <Label hint={t("The composer always comes first")}>{t("Sections")}</Label>
         <p className="-mt-0.5 mb-2.5 text-[11.5px] text-graphite">
-          Pick a size for each section, like a widget. You can also hover a section’s title on Home to change its size there.
+          {t("Pick a size for each section, like a widget. You can also hover a section’s title on Home to change its size there.")}
         </p>
         <ul className="space-y-2.5">
           {home.sections.map((s, i) => {
             const info = sectionInfo[s.id];
+            const title = info ? t(info.title) : s.id;
             const size = asSize(s.size);
             return (
               <li key={s.id} className="rounded-2xl border border-hairline bg-surface p-3.5 shadow-card">
@@ -73,21 +76,21 @@ export function CustomizeHome({ onClose }: { onClose: () => void }) {
                     <SizeGlyph size={size} className="h-3.5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-semibold">{info?.title ?? s.id}</div>
-                    <div className="text-[11.5px] text-graphite">{info?.detail}</div>
+                    <div className="text-[13px] font-semibold">{title}</div>
+                    <div className="text-[11.5px] text-graphite">{info && t(info.detail)}</div>
                   </div>
-                  <IconButton label="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
+                  <IconButton label={t("Move up")} disabled={i === 0} onClick={() => move(i, -1)}>
                     <ChevronUp className="size-4" />
                   </IconButton>
-                  <IconButton label="Move down" disabled={i === home.sections.length - 1} onClick={() => move(i, 1)}>
+                  <IconButton label={t("Move down")} disabled={i === home.sections.length - 1} onClick={() => move(i, 1)}>
                     <ChevronDown className="size-4" />
                   </IconButton>
-                  <Switch checked={s.visible} onChange={() => patch(i, { visible: !s.visible })} label={`Show ${info?.title ?? s.id}`} />
+                  <Switch checked={s.visible} onChange={() => patch(i, { visible: !s.visible })} label={t("Show {section}", { section: title })} />
                 </div>
                 {s.visible && (
                   <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-hairline pt-3">
-                    <SizePicker value={size} onChange={(v) => patch(i, { size: v })} label={`${info?.title} size`} />
-                    <span className="text-[11.5px] text-graphite">{info?.sizes[size]}</span>
+                    <SizePicker value={size} onChange={(v) => patch(i, { size: v })} label={t("{section} size", { section: title })} />
+                    <span className="text-[11.5px] text-graphite">{info && t(info.sizes[size])}</span>
                   </div>
                 )}
               </li>
@@ -97,7 +100,7 @@ export function CustomizeHome({ onClose }: { onClose: () => void }) {
       </section>
 
       <section className="mt-5">
-        <Label>Cues in “Recently Used”</Label>
+        <Label>{t("Cues in “Recently Used”")}</Label>
         <div role="radiogroup" className="inline-flex gap-1 rounded-full bg-fill p-1">
           {[3, 6, 9, 12].map((n) => (
             <button

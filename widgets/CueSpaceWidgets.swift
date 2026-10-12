@@ -16,10 +16,25 @@ struct CueItem: Codable, Identifiable, Hashable {
     let icon: String
     let items: Int
     let shortcut: String?
+    /// "3 items", in the app's language.
+    var detail: String? = nil
+
+    var itemsText: String { detail ?? "\(items) item\(items == 1 ? "" : "s")" }
 }
+
+/// The widget's words, written by the app in its current language.
+struct Labels: Codable {
+    var noCues = "No Cues yet"
+    var describeOne = "Describe one in Cue Space."
+    var startCue = "Start Cue"
+    var cues = "Cues"
+}
+
+var labels = Labels()
 
 struct Snapshot: Codable {
     let cues: [CueItem]
+    var labels: Labels? = nil
 }
 
 /// Reads the snapshot from the real home folder. In the sandbox,
@@ -31,6 +46,7 @@ func loadCues() -> [CueItem] {
     guard let data = try? Data(contentsOf: url),
           let snap = try? JSONDecoder().decode(Snapshot.self, from: data)
     else { return [] }
+    labels = snap.labels ?? Labels()
     return snap.cues
 }
 
@@ -102,8 +118,8 @@ struct EmptyView: View {
         VStack(alignment: .leading, spacing: 6) {
             CueMark(size: 22)
             Spacer()
-            Text("No Cues yet").font(.headline)
-            Text("Describe one in Cue Space.").font(.caption).foregroundStyle(.secondary)
+            Text(labels.noCues).font(.headline)
+            Text(labels.describeOne).font(.caption).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .widgetURL(openURL)
@@ -123,9 +139,9 @@ struct SmallView: View {
             }
             Spacer()
             Text(cue.name).font(.system(size: 17, weight: .semibold)).lineLimit(1)
-            Text("\(cue.items) item\(cue.items == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
+            Text(cue.itemsText).font(.caption).foregroundStyle(.secondary)
             HStack(spacing: 4) {
-                Text("Start Cue").font(.system(size: 12, weight: .semibold))
+                Text(labels.startCue).font(.system(size: 12, weight: .semibold))
                 Image(systemName: "arrow.right").font(.system(size: 10, weight: .bold))
             }
             .foregroundStyle(.white)
@@ -151,7 +167,7 @@ struct CueRow: View {
                     .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(.quaternary))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(cue.name).font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                    Text("\(cue.items) item\(cue.items == 1 ? "" : "s")").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(cue.itemsText).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 4)
                 Image(systemName: "play.fill")
@@ -173,7 +189,7 @@ struct ListView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 CueMark(size: 14)
-                Text("Cues").font(.system(size: 13, weight: .semibold))
+                Text(labels.cues).font(.system(size: 13, weight: .semibold))
                 Spacer()
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: columns), alignment: .leading, spacing: 8) {

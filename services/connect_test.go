@@ -62,7 +62,7 @@ func TestAddToClaudeDesktopKeepsOtherSettings(t *testing.T) {
 
 func TestAddToClaudeDesktopNotInstalled(t *testing.T) {
 	s := &ConnectService{Home: t.TempDir(), CLIPath: "/x/cuespace-cli"}
-	if _, err := s.AddToClaudeDesktop(); err == nil || !strings.Contains(err.Error(), "open it once") {
+	if _, err := s.AddToClaudeDesktop(); err == nil || !strings.Contains(err.Error(), "Open it once") {
 		t.Errorf("err = %v", err)
 	}
 }

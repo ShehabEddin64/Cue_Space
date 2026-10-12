@@ -112,6 +112,8 @@ Cue Space follows Apple’s Human Interface Guidelines for structure and its own
 - **Mac conventions.** A sidebar you can hide (⌃⌘S), every command in the menu bar, Settings at ⌘,, and an Appearance setting (System, Light or Dark).
 - **Customizable Home.** Change the greeting, show, hide and reorder the sections (Pinned, Recently Used) and pick a Small, Medium or Large size for each from View › Customize Home.
 - **First run.** A five-step welcome tour, replayable from Help › Welcome Tour.
+- **Tutorial.** A sidebar tab (and Help › Tutorial, ⇧⌘T) with a step-by-step guide to every feature and how to set it up, each with buttons that take you to the right place.
+- **English and French.** Settings › Language: System, English or Français. The whole interface, the menu bar, the widget and the app's messages follow it, and the AI writes its proposals in French when the app is in French. Translations use the English text as the key: `frontend/src/i18n.fr.ts` and `internal/i18n/fr.go`. `npm run check:i18n` and `go test ./internal/i18n` fail if a string is missing.
 - **App icon.** A full-bleed Cue Red square with the mark and a soft shadow, so macOS 26 masks it into the standard shape instead of placing it on a plate. `build/appicon.icon` is the Icon Composer source; compiling it into `Assets.car` needs full Xcode, so builds use `build/darwin/icons.icns`, generated from `build/appicon.png`.
 
 ## Development

@@ -1,6 +1,7 @@
 import { ArrowRight, Pin, Play } from "lucide-react";
 import type { ReactNode } from "react";
 import { displayName, startedLabel, timeAgo, type Cue } from "../api";
+import { msg, t, tn } from "../i18n";
 import { RecentList } from "./Recents";
 import { Button, CueMark, TypeIcon } from "./ui";
 
@@ -12,9 +13,9 @@ import { Button, CueMark, TypeIcon } from "./ui";
 export type SectionSize = "small" | "medium" | "large";
 
 export const sizes: { id: SectionSize; label: string }[] = [
-  { id: "small", label: "Small" },
-  { id: "medium", label: "Medium" },
-  { id: "large", label: "Large" },
+  { id: "small", label: msg("Small") },
+  { id: "medium", label: msg("Medium") },
+  { id: "large", label: msg("Large") },
 ];
 
 export const asSize = (s: string): SectionSize => (s === "small" || s === "large" ? s : "medium");
@@ -50,8 +51,8 @@ export function SizePicker({
           key={s.id}
           role="radio"
           aria-checked={value === s.id}
-          aria-label={s.label}
-          title={s.label}
+          aria-label={t(s.label)}
+          title={t(s.label)}
           onClick={(e) => {
             e.stopPropagation();
             onChange(s.id);
@@ -61,7 +62,7 @@ export function SizePicker({
           }`}
         >
           <SizeGlyph size={s.id} />
-          {!compact && s.label}
+          {!compact && t(s.label)}
         </button>
       ))}
     </div>
@@ -169,12 +170,12 @@ function CueTile({
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-semibold tracking-[-0.01em]">{cue.name}</div>
         <div className="truncate text-[11px] text-graphite">
-          {recent && cue.lastRunAt ? timeAgo(cue.lastRunAt) : shortcut || `${count} item${count === 1 ? "" : "s"}`}
+          {recent && cue.lastRunAt ? timeAgo(cue.lastRunAt) : shortcut || tn(count, "{n} item", "{n} items")}
         </div>
       </div>
       <button
-        aria-label={`Start ${cue.name}`}
-        title={shortcut ? `Start Cue (${shortcut})` : "Start Cue"}
+        aria-label={t("Start {name}", { name: cue.name })}
+        title={shortcut ? t("Start Cue ({shortcut})", { shortcut }) : t("Start Cue")}
         disabled={starting || count === 0}
         onClick={(e) => {
           e.stopPropagation();
@@ -220,10 +221,10 @@ export function CueCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-[14px] font-semibold tracking-[-0.01em]">{cue.name}</span>
-            {pinned && <Pin className="size-3 shrink-0 fill-current text-faint" aria-label="Pinned" />}
+            {pinned && <Pin className="size-3 shrink-0 fill-current text-faint" aria-label={t("Pinned")} />}
           </div>
           <div className="truncate text-[11.5px] text-graphite">
-            {count} item{count === 1 ? "" : "s"}
+            {tn(count, "{n} item", "{n} items")}
             {cue.lastRunAt && ` · ${timeAgo(cue.lastRunAt)}`}
           </div>
         </div>
@@ -254,7 +255,10 @@ function CueCardLarge({
 }) {
   const items = enabled(cue);
   const shown = items.slice(0, 4);
-  const subtitle = recent && cue.lastRunAt ? `Started ${startedLabel(cue.lastRunAt)}` : cue.description || `${items.length} item${items.length === 1 ? "" : "s"}`;
+  const subtitle =
+    recent && cue.lastRunAt
+      ? t("Started {time}", { time: startedLabel(cue.lastRunAt) })
+      : cue.description || tn(items.length, "{n} item", "{n} items");
   return (
     <div
       role="button"
@@ -268,7 +272,7 @@ function CueCardLarge({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-[15px] font-semibold tracking-[-0.015em]">{cue.name}</span>
-            {pinned && <Pin className="size-3 shrink-0 fill-current text-faint" aria-label="Pinned" />}
+            {pinned && <Pin className="size-3 shrink-0 fill-current text-faint" aria-label={t("Pinned")} />}
           </div>
           <div className="truncate text-[12px] text-graphite">{subtitle}</div>
         </div>
@@ -280,8 +284,8 @@ function CueCardLarge({
             <span className="truncate">{displayName(r)}</span>
           </li>
         ))}
-        {items.length > shown.length && <li className="pl-5.5 text-[11.5px] text-faint">and {items.length - shown.length} more</li>}
-        {items.length === 0 && <li className="text-[12px] text-faint">Nothing to open yet</li>}
+        {items.length > shown.length && <li className="pl-5.5 text-[11.5px] text-faint">{t("and {n} more", { n: items.length - shown.length })}</li>}
+        {items.length === 0 && <li className="text-[12px] text-faint">{t("Nothing to open yet")}</li>}
       </ul>
       <StartButton className="mt-4 w-full" size="md" count={items.length} shortcut={shortcut} starting={starting} onStart={onStart} />
     </div>
@@ -310,13 +314,13 @@ function StartButton({
       className={`${className} group-hover:bg-red group-hover:text-white`}
       busy={starting}
       disabled={count === 0}
-      title={shortcut ? `Start Cue (${shortcut})` : "Start Cue"}
+      title={shortcut ? t("Start Cue ({shortcut})", { shortcut }) : t("Start Cue")}
       onClick={(e) => {
         e.stopPropagation();
         onStart();
       }}
     >
-      Start Cue
+      {t("Start Cue")}
       {!starting && <ArrowRight className="size-3.5" />}
       {shortcut && !starting && <span className="pl-1 text-[10.5px] font-medium opacity-60">{shortcut}</span>}
     </Button>

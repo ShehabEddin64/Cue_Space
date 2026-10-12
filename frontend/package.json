@@ -7,7 +7,8 @@
     "dev": "vite",
     "build:dev": "tsc && vite build --minify false --mode development",
     "build": "tsc && vite build --mode production",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -11,6 +11,7 @@ import {
   type ArrangementInfo,
   type Resource,
 } from "../api";
+import { msg, t } from "../i18n";
 import { Button, IconButton, TypeIcon } from "./ui";
 
 /*
@@ -149,8 +150,8 @@ export function DesktopThumb({
 }
 
 function desktopCaption(d: Desktop, info: ArrangementInfo | undefined) {
-  if (d.arrangement === Arrangement.ArrangeFullScreen) return "Own desktop · Full Screen";
-  return `${d.newDesktop ? "New desktop" : "This desktop"} · ${info?.title ?? d.arrangement}`;
+  if (d.arrangement === Arrangement.ArrangeFullScreen) return `${t("Own desktop")} · ${t("Full Screen")}`;
+  return `${d.newDesktop ? t("New desktop") : t("This desktop")} · ${info ? t(info.title) : d.arrangement}`;
 }
 
 /** Read-only preview of a Cue's desktops, as they'll appear in Mission Control. */
@@ -186,7 +187,7 @@ export function DesktopStrip({ cue, onEdit }: { cue: Cue; onEdit?: () => void })
             <figure key={d.id} className="w-[190px] shrink-0">
               <DesktopThumb cue={cue} desktop={d} info={info} onClick={onEdit} />
               <figcaption className="mt-1.5 text-center text-[11.5px]">
-                <span className="font-medium">Desktop {i + 1}</span>
+                <span className="font-medium">{t("Desktop {n}", { n: i + 1 })}</span>
                 <span className="text-graphite"> · {desktopCaption(d, info).split(" · ").pop()}</span>
               </figcaption>
             </figure>
@@ -202,22 +203,35 @@ export function PermissionBanner({ onAllow }: { onAllow: () => void }) {
     <div className="mb-3 flex items-center gap-3 rounded-xl bg-red-tint px-3.5 py-2.5 text-[12.5px] text-red-on-tint">
       <ShieldCheck className="size-4 shrink-0" />
       <span className="flex-1">
-        To arrange windows and create desktops, allow Cue Space in System Settings › Privacy &amp; Security › Accessibility.
+        {t("To arrange windows and create desktops, allow Cue Space in System Settings › Privacy & Security › Accessibility.")}
       </span>
       <Button size="sm" variant="tinted" onClick={onAllow}>
-        Allow…
+        {t("Allow…")}
       </Button>
     </div>
   );
 }
 
+// Arrangement titles come from Go (cue.Arrangements); listed here so the
+// translation checker knows them.
+export const arrangementTitles = [
+  msg("Full Screen"),
+  msg("Fill"),
+  msg("Left & Right"),
+  msg("Top & Bottom"),
+  msg("Left & Quarters"),
+  msg("Quarters"),
+  msg("Thirds"),
+];
+
+// Titles are English; shown with t().
 const groups: { title: string; ids: Arrangement[] }[] = [
-  { title: "Own desktop", ids: [Arrangement.ArrangeFullScreen] },
+  { title: msg("Own desktop"), ids: [Arrangement.ArrangeFullScreen] },
   {
-    title: "Fill & Arrange",
+    title: msg("Fill & Arrange"),
     ids: [Arrangement.ArrangeFill, Arrangement.ArrangeLeftRight, Arrangement.ArrangeLeftQuarters, Arrangement.ArrangeQuarters],
   },
-  { title: "More", ids: [Arrangement.ArrangeTopBottom, Arrangement.ArrangeThirds] },
+  { title: msg("More"), ids: [Arrangement.ArrangeTopBottom, Arrangement.ArrangeThirds] },
 ];
 
 /** The layout section of the editor. */
@@ -267,11 +281,11 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
       {desktops.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-hairline px-5 py-6 text-center">
           <p className="text-[13px] text-graphite">
-            Choose where windows go: a full-screen app on its own desktop, two apps side by side on a new desktop, and more.
+            {t("Choose where windows go: a full-screen app on its own desktop, two apps side by side on a new desktop, and more.")}
           </p>
           <Button className="mt-3" size="sm" onClick={add}>
             <Plus className="size-3.5" />
-            Add Desktop
+            {t("Add Desktop")}
           </Button>
         </div>
       ) : (
@@ -285,7 +299,7 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
                 <figure key={d.id} className="w-[168px] shrink-0">
                   <DesktopThumb cue={cue} desktop={d} info={di} selected={i === selected} onClick={() => setSelected(i)} />
                   <figcaption className={`mt-1.5 text-center text-[11.5px] ${i === selected ? "font-semibold" : "text-graphite"}`}>
-                    Desktop {i + 1}
+                    {t("Desktop {n}", { n: i + 1 })}
                   </figcaption>
                 </figure>
               );
@@ -293,8 +307,8 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
             <button
               type="button"
               onClick={add}
-              aria-label="Add Desktop"
-              title="Add Desktop"
+              aria-label={t("Add Desktop")}
+              title={t("Add Desktop")}
               className="flex aspect-[16/10] w-[96px] shrink-0 items-center justify-center rounded-xl border border-dashed border-hairline text-graphite hover:bg-surface hover:text-ink"
             >
               <Plus className="size-5" />
@@ -305,9 +319,9 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
             <div className="mt-4 rounded-2xl border border-hairline bg-surface p-4 shadow-card">
               <div className="flex items-center justify-between">
                 <h4 className="text-[13px] font-semibold">
-                  Desktop {selected + 1} <span className="font-normal text-graphite">· {desktopCaption(current, info)}</span>
+                  {t("Desktop {n}", { n: selected + 1 })} <span className="font-normal text-graphite">· {desktopCaption(current, info)}</span>
                 </h4>
-                <IconButton label={`Remove Desktop ${selected + 1}`} onClick={() => remove(selected)} className="hover:!text-red-text">
+                <IconButton label={t("Remove Desktop {n}", { n: selected + 1 })} onClick={() => remove(selected)} className="hover:!text-red-text">
                   <Trash2 className="size-3.5" />
                 </IconButton>
               </div>
@@ -316,7 +330,7 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
               <div className="mt-3 flex flex-wrap gap-x-6 gap-y-3">
                 {groups.map((g) => (
                   <div key={g.title}>
-                    <div className="mb-1.5 text-[11px] font-semibold text-faint">{g.title}</div>
+                    <div className="mb-1.5 text-[11px] font-semibold text-faint">{t(g.title)}</div>
                     <div className="flex gap-1.5">
                       {g.ids.map((id) => {
                         const a = arrangements.find((x) => x.id === id);
@@ -326,8 +340,8 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
                           <button
                             key={id}
                             type="button"
-                            title={a.title}
-                            aria-label={a.title}
+                            title={t(a.title)}
+                            aria-label={t(a.title)}
                             aria-pressed={on}
                             onClick={() => setArrangement(a)}
                             className={`flex h-10 w-12 items-center justify-center rounded-lg border transition ${
@@ -344,10 +358,10 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
               </div>
 
               {current.arrangement !== Arrangement.ArrangeFullScreen && (
-                <div role="radiogroup" aria-label="Which desktop" className="mt-4 inline-flex gap-1 rounded-full bg-fill p-1">
+                <div role="radiogroup" aria-label={t("Which desktop")} className="mt-4 inline-flex gap-1 rounded-full bg-fill p-1">
                   {[
-                    [true, "On a new desktop"],
-                    [false, "On the current desktop"],
+                    [true, msg("On a new desktop")],
+                    [false, msg("On the current desktop")],
                   ].map(([value, label]) => (
                     <button
                       key={String(value)}
@@ -358,7 +372,7 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
                         !!current.newDesktop === value ? "bg-surface text-ink shadow-card" : "text-graphite hover:text-ink"
                       }`}
                     >
-                      {label}
+                      {t(label as string)}
                     </button>
                   ))}
                 </div>
@@ -375,15 +389,15 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
                     <select
                       value={current.slots[k] ?? ""}
                       onChange={(e) => assign(k, e.target.value)}
-                      aria-label={`Slot ${k + 1}`}
+                      aria-label={t("Slot {n}", { n: k + 1 })}
                       className="h-8 min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-2 text-[13px] focus:border-red-text/60 focus:outline-none"
                     >
-                      <option value="">Empty</option>
+                      <option value="">{t("Empty")}</option>
                       {cue.resources.map((r: Resource, n) => (
                         <option key={r.id} value={r.id}>
                           {n + 1} · {displayName(r)}
-                          {placedElsewhere(r.id) ? " (moves from another desktop)" : ""}
-                          {r.disabled ? " (off)" : ""}
+                          {placedElsewhere(r.id) ? ` (${t("moves from another desktop")})` : ""}
+                          {r.disabled ? ` (${t("off")})` : ""}
                         </option>
                       ))}
                     </select>
@@ -400,13 +414,14 @@ export function LayoutEditor({ cue, onChange }: { cue: Cue; onChange: (layout: L
 
 function slotName(info: ArrangementInfo, k: number): string {
   const names: Record<string, string[]> = {
-    fullscreen: ["Full screen"],
-    fill: ["Whole desktop"],
-    "left-right": ["Left half", "Right half"],
-    "top-bottom": ["Top half", "Bottom half"],
-    "left-quarters": ["Left half", "Top right", "Bottom right"],
-    quarters: ["Top left", "Top right", "Bottom left", "Bottom right"],
-    thirds: ["Left third", "Middle third", "Right third"],
+    fullscreen: [msg("Full screen")],
+    fill: [msg("Whole desktop")],
+    "left-right": [msg("Left half"), msg("Right half")],
+    "top-bottom": [msg("Top half"), msg("Bottom half")],
+    "left-quarters": [msg("Left half"), msg("Top right"), msg("Bottom right")],
+    quarters: [msg("Top left"), msg("Top right"), msg("Bottom left"), msg("Bottom right")],
+    thirds: [msg("Left third"), msg("Middle third"), msg("Right third")],
   };
-  return names[info.id]?.[k] ?? `Slot ${k + 1}`;
+  const name = names[info.id]?.[k];
+  return name ? t(name) : t("Slot {n}", { n: k + 1 });
 }

@@ -20,6 +20,8 @@ import { Home, type HomeHandle } from "./components/Home";
 import { ConnectSheet } from "./components/ConnectSheet";
 import { Library } from "./components/Library";
 import { Recents } from "./components/Recents";
+import { Tutorial, type TutorialAction } from "./components/Tutorial";
+import { t, tn } from "./i18n";
 import { RunToast, type RunReport } from "./components/RunToast";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { ShortcutsSheet } from "./components/ShortcutsSheet";
@@ -32,6 +34,7 @@ type View =
   | { kind: "home" }
   | { kind: "library" }
   | { kind: "recents" }
+  | { kind: "tutorial" }
   | { kind: "cue"; id: string }
   | { kind: "edit"; session: EditorSession; back: View };
 
@@ -173,6 +176,8 @@ function Shell() {
         return setView({ kind: "library" });
       case "recents":
         return setView({ kind: "recents" });
+      case "tutorial":
+        return setView({ kind: "tutorial" });
       case "customize-home":
         setView({ kind: "home" });
         return setSheet("customize");
@@ -226,7 +231,7 @@ function Shell() {
   const closeReport = useCallback(() => setReport(null), []);
 
   const selected =
-    view.kind === "home" || view.kind === "library" || view.kind === "recents" ? view.kind : view.kind === "cue" ? view.id : (view.session.saved?.id ?? null);
+    view.kind === "home" || view.kind === "library" || view.kind === "recents" || view.kind === "tutorial" ? view.kind : view.kind === "cue" ? view.id : (view.session.saved?.id ?? null);
 
   return (
     <LayoutContext.Provider value={{ sidebarOpen, toggleSidebar }}>
@@ -243,6 +248,7 @@ function Shell() {
             onHome={() => goHome()}
             onLibrary={() => setView({ kind: "library" })}
             onRecents={() => setView({ kind: "recents" })}
+            onTutorial={() => setView({ kind: "tutorial" })}
             onSelect={(c) => setView({ kind: "cue", id: c.id })}
             onStart={start}
             onNewBlank={() => newBlank()}
@@ -254,7 +260,7 @@ function Shell() {
         <main className="relative min-w-0 flex-1 bg-canvas">
           {loadError && (
             <p role="alert" className="absolute inset-x-0 top-[52px] z-10 bg-red-tint px-6 py-2 text-[12px] text-red-on-tint">
-              Couldn’t read your Cues: {loadError}
+              {t("Couldn’t read your Cues: {error}", { error: loadError })}
             </p>
           )}
           {library && library.problems.length > 0 && view.kind !== "edit" && (
@@ -263,8 +269,11 @@ function Shell() {
               className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-red-tint px-3.5 py-1.5 text-[12px] text-red-on-tint hover:underline"
               title={library.problems.map((p) => `${p.file}: ${p.error}`).join("\n")}
             >
-              {library.problems.length === 1 ? "1 file" : `${library.problems.length} files`} in your Cues folder couldn’t be read. Show in
-              Finder
+              {tn(
+                library.problems.length,
+                "{n} file in your Cues folder couldn’t be read. Show in Finder",
+                "{n} files in your Cues folder couldn’t be read. Show in Finder",
+              )}
             </button>
           )}
 
@@ -294,6 +303,14 @@ function Shell() {
               onStart={start}
               onNewBlank={() => newBlank()}
               onNew={() => goHome(true)}
+            />
+          )}
+
+          {view.kind === "tutorial" && (
+            <Tutorial
+              onAction={(a: TutorialAction) =>
+                a === "accessibility" ? void SystemService.RequestArrangeWindows() : onMenu.current(a)
+              }
             />
           )}
 

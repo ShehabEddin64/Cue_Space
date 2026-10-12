@@ -1,11 +1,12 @@
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Cue, CueService, errorMessage, newResource, Resource, ResourceType, SystemService } from "../api";
+import { Cue, CueService, errorMessage, newResource, Resource, ResourceType, SystemService, type Problem } from "../api";
 import { LayoutEditor } from "./Layout";
 import { ResourceRow } from "./ResourceRow";
 import { Toolbar } from "./Toolbar";
-import { Button, CueMark, Kbd, SectionTitle, TypeIcon, typeNames } from "./ui";
+import { msg, t } from "../i18n";
+import { Button, CueMark, Kbd, SectionTitle, TypeIcon } from "./ui";
 
 export type EditorSession = {
   cue: Cue;
@@ -45,7 +46,7 @@ export function Editor({
   const [draft, setDraft] = useState<Cue>(session.cue);
   const saved = session.saved;
   const [questions, setQuestions] = useState(session.questions ?? {});
-  const [problems, setProblems] = useState<string[]>([]);
+  const [problems, setProblems] = useState<Problem[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<"discard" | "delete" | null>(session.askDelete ? "delete" : null);
@@ -65,15 +66,15 @@ export function Editor({
 
   // Live validation from the same Go code that guards saving.
   useEffect(() => {
-    const t = setTimeout(() => CueService.Problems(draft).then(setProblems), 200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => CueService.Problems(draft).then(setProblems), 200);
+    return () => clearTimeout(timer);
   }, [draft]);
 
-  const nameMissing = problems.includes(NAME_MISSING);
+  const nameMissing = problems.some((p) => p.name);
   const showNameProblem = nameMissing && (nameTouched || triedSave);
   // The name has its own hint under the field; everything else is listed.
-  const otherProblems = problems.filter((p) => p !== NAME_MISSING && (triedSave || !p.endsWith(MISSING)));
-  const missingCount = problems.filter((p) => p.endsWith(MISSING)).length;
+  const otherProblems = problems.filter((p) => !p.name && (triedSave || !p.missing)).map((p) => p.message);
+  const missingCount = problems.filter((p) => p.missing).length;
 
   const set = (patch: Partial<Cue>) => setDraft((d) => new Cue({ ...d, ...patch }));
   const setResources = (fn: (rs: Resource[]) => Resource[]) => setDraft((d) => new Cue({ ...d, resources: fn(d.resources) }));
@@ -166,21 +167,21 @@ export function Editor({
         leading={
           confirm ? null : (
             <Button variant="ghost" size="sm" onClick={close}>
-              Cancel
+              {t("Cancel")}
             </Button>
           )
         }
-        title={confirm ? null : saved ? "Edit Cue" : "New Cue"}
+        title={confirm ? null : saved ? t("Edit Cue") : t("New Cue")}
         trailing={
           confirm === "discard" ? (
-            <ConfirmBar text="Discard your changes?" action="Discard" onConfirm={onClose} onCancel={() => setConfirm(null)} />
+            <ConfirmBar text={t("Discard your changes?")} action={t("Discard")} onConfirm={onClose} onCancel={() => setConfirm(null)} />
           ) : confirm === "delete" ? (
-            <ConfirmBar text="Move this Cue to the Trash?" action="Move to Trash" onConfirm={remove} onCancel={() => setConfirm(null)} />
+            <ConfirmBar text={t("Move this Cue to the Trash?")} action={t("Move to Trash")} onConfirm={remove} onCancel={() => setConfirm(null)} />
           ) : (
             <>
               {saved && (
                 <Button variant="danger" size="sm" onClick={() => setConfirm("delete")}>
-                  Move to Trash
+                  {t("Move to Trash")}
                 </Button>
               )}
               <Button
@@ -189,9 +190,9 @@ export function Editor({
                 busy={saving}
                 disabled={!dirty || otherProblems.length > 0 || showNameProblem}
                 onClick={trySave}
-                title={otherProblems.length ? "Fix the issues below first" : showNameProblem ? "Name this Cue first" : "Save (⌘S)"}
+                title={otherProblems.length ? t("Fix the issues below first") : showNameProblem ? t("Name this Cue first") : t("Save (⌘S)")}
               >
-                Save
+                {t("Save")}
               </Button>
             </>
           )
@@ -216,8 +217,8 @@ export function Editor({
               value={draft.icon || ""}
               onChange={(e) => set({ icon: lastGrapheme(e.target.value) })}
               placeholder="◌"
-              aria-label="Icon (emoji)"
-              title="Type or paste an emoji (⌃⌘Space)"
+              aria-label={t("Icon (emoji)")}
+              title={t("Type or paste an emoji (⌃⌘Space)")}
               className="size-[72px] shrink-0 rounded-[20px] bg-surface text-center text-[34px] shadow-card placeholder:text-faint focus:outline-none focus:ring-4 focus:ring-red-tint"
             />
             <div className="min-w-0 flex-1">
@@ -228,8 +229,8 @@ export function Editor({
                   set({ name: e.target.value });
                   if (e.target.value.trim()) setNameTouched(true);
                 }}
-                placeholder="Name this Cue"
-                aria-label="Name"
+                placeholder={t("Name this Cue")}
+                aria-label={t("Name")}
                 aria-invalid={showNameProblem}
                 spellCheck={false}
                 className="w-full bg-transparent text-[28px] font-semibold tracking-[-0.025em] placeholder:text-faint focus:outline-none"
@@ -237,11 +238,11 @@ export function Editor({
               <input
                 value={draft.description || ""}
                 onChange={(e) => set({ description: e.target.value })}
-                placeholder="What is it for?"
-                aria-label="Description"
+                placeholder={t("What is it for?")}
+                aria-label={t("Description")}
                 className="mt-0.5 w-full bg-transparent text-[15px] text-graphite placeholder:text-faint focus:outline-none"
               />
-              {showNameProblem && <p className="mt-1 text-[12px] font-medium text-red-text">Give this Cue a name to save it.</p>}
+              {showNameProblem && <p className="mt-1 text-[12px] font-medium text-red-text">{t("Give this Cue a name to save it.")}</p>}
             </div>
           </div>
 
@@ -249,11 +250,11 @@ export function Editor({
             <SectionTitle
               trailing={
                 <span className="text-[11px] text-faint">
-                  Drag to reorder · paste a link to add it · <Kbd>⌘S</Kbd>
+                  {t("Drag to reorder · paste a link to add it")} · <Kbd>⌘S</Kbd>
                 </span>
               }
             >
-              Opens in this order
+              {t("Opens in this order")}
             </SectionTitle>
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -277,22 +278,22 @@ export function Editor({
 
             {draft.resources.length === 0 && (
               <div className="rounded-2xl border border-dashed border-hairline px-4 py-8 text-center text-[13px] text-graphite">
-                Add the links, apps, files and folders you use for this activity.
+                {t("Add the links, apps, files and folders you use for this activity.")}
               </div>
             )}
 
             <div className="mt-3 flex flex-wrap gap-2">
-              {addable.map((t) => (
-                <Button key={t} size="sm" onClick={() => add(t)}>
-                  <TypeIcon type={t} className="size-3.5" />
-                  Add {typeNames[t]}
+              {addable.map((type) => (
+                <Button key={type} size="sm" onClick={() => add(type)}>
+                  <TypeIcon type={type} className="size-3.5" />
+                  {t(addLabels[type])}
                 </Button>
               ))}
             </div>
           </div>
 
           <div className="mt-10">
-            <SectionTitle trailing={<span className="text-[11px] text-faint">Needs Accessibility permission</span>}>Desktops</SectionTitle>
+            <SectionTitle trailing={<span className="text-[11px] text-faint">{t("Needs Accessibility permission")}</span>}>{t("Desktops")}</SectionTitle>
             <LayoutEditor cue={draft} onChange={(layout) => set({ layout })} />
           </div>
 
@@ -312,17 +313,19 @@ export function Editor({
   );
 }
 
-// How Go's validation words values that aren't filled in yet
-// (internal/cue/validate.go).
-const MISSING = " is missing";
-const NAME_MISSING = "Name" + MISSING;
+const addLabels: Record<string, string> = {
+  [ResourceType.TypeURL]: msg("Add Link"),
+  [ResourceType.TypeApp]: msg("Add App"),
+  [ResourceType.TypeFile]: msg("Add File"),
+  [ResourceType.TypeFolder]: msg("Add Folder"),
+};
 
 function ConfirmBar({ text, action, onConfirm, onCancel }: { text: string; action: string; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="animate-pop-in flex items-center gap-2">
       <span className="text-[12px] text-graphite">{text}</span>
       <Button size="sm" variant="ghost" onClick={onCancel}>
-        Cancel
+        {t("Cancel")}
       </Button>
       <Button size="sm" variant="primary" onClick={onConfirm}>
         {action}

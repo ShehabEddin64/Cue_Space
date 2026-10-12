@@ -1,5 +1,6 @@
 import { PanelLeft } from "lucide-react";
 import { createContext, useContext, type ReactNode } from "react";
+import { t } from "../i18n";
 import { IconButton } from "./ui";
 
 export const LayoutContext = createContext<{ sidebarOpen: boolean; toggleSidebar: () => void }>({
@@ -17,7 +18,7 @@ export function Toolbar({ leading, title, trailing }: { leading?: ReactNode; tit
   return (
     <div className={`drag flex h-[52px] shrink-0 items-center gap-2 pr-4 ${sidebarOpen ? "pl-4" : "pl-[84px]"}`}>
       {!sidebarOpen && (
-        <IconButton label="Show Sidebar (⌃⌘S)" onClick={toggleSidebar}>
+        <IconButton label={t("Show Sidebar (⌃⌘S)")} onClick={toggleSidebar}>
           <PanelLeft className="size-4" strokeWidth={1.75} />
         </IconButton>
       )}

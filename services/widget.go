@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ShehabEddin64/Cue_Space/internal/cue"
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 // WidgetSnapshot is what the desktop widget shows. It holds only names,
@@ -18,6 +19,15 @@ import (
 type WidgetSnapshot struct {
 	UpdatedAt time.Time    `json:"updatedAt"`
 	Cues      []WidgetItem `json:"cues"`
+	Labels    WidgetLabels `json:"labels"`
+}
+
+// WidgetLabels are the widget's words in the app's language.
+type WidgetLabels struct {
+	NoCues      string `json:"noCues"`
+	DescribeOne string `json:"describeOne"`
+	StartCue    string `json:"startCue"`
+	Cues        string `json:"cues"`
 }
 
 type WidgetItem struct {
@@ -26,6 +36,8 @@ type WidgetItem struct {
 	Icon     string `json:"icon"`
 	Items    int    `json:"items"`
 	Shortcut string `json:"shortcut,omitempty"`
+	// Detail is the item count as text, e.g. "3 items".
+	Detail string `json:"detail"`
 }
 
 // WidgetWriter keeps widget.json in the data folder up to date and asks
@@ -43,7 +55,16 @@ type WidgetWriter struct {
 // BuildWidgetSnapshot orders Cues like the ⌘1–⌘9 shortcuts.
 func BuildWidgetSnapshot(cues []cue.Cue, pinned []string) WidgetSnapshot {
 	ordered := ShortcutOrder(cues, pinned)
-	snap := WidgetSnapshot{UpdatedAt: time.Now().UTC().Truncate(time.Second), Cues: []WidgetItem{}}
+	snap := WidgetSnapshot{
+		UpdatedAt: time.Now().UTC().Truncate(time.Second),
+		Cues:      []WidgetItem{},
+		Labels: WidgetLabels{
+			NoCues:      i18n.T("No Cues yet"),
+			DescribeOne: i18n.T("Describe one in Cue Space."),
+			StartCue:    i18n.T("Start Cue"),
+			Cues:        i18n.T("Cues"),
+		},
+	}
 	for i, c := range ordered {
 		if i == 12 {
 			break
@@ -53,6 +74,11 @@ func BuildWidgetSnapshot(cues []cue.Cue, pinned []string) WidgetSnapshot {
 			if !r.Disabled {
 				item.Items++
 			}
+		}
+		if item.Items == 1 {
+			item.Detail = i18n.T("1 item")
+		} else {
+			item.Detail = i18n.T("%d items", item.Items)
 		}
 		if item.Icon == "" {
 			item.Icon = "◌"

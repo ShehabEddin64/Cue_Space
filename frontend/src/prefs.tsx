@@ -1,8 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { HomePrefs, HomeSection, Prefs, PrefsService } from "./api";
+import { setLanguage, type Lang } from "./i18n";
 
 export const defaultPrefs = new Prefs({
   appearance: "system",
+  language: "system",
   onboarded: true, // assume onboarded until the real prefs load, so the tour never flashes
   pinned: [],
   home: new HomePrefs({
@@ -20,6 +22,7 @@ type PrefsContextValue = {
   loaded: boolean;
   save: (change: (p: Prefs) => Prefs) => Promise<void>;
   togglePin: (id: string) => Promise<void>;
+  lang: Lang;
 };
 
 const PrefsContext = createContext<PrefsContextValue>({
@@ -27,11 +30,13 @@ const PrefsContext = createContext<PrefsContextValue>({
   loaded: false,
   save: async () => {},
   togglePin: async () => {},
+  lang: "en",
 });
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
   const [prefs, setPrefs] = useState<Prefs>(defaultPrefs);
   const [loaded, setLoaded] = useState(false);
+  const [lang, setLang] = useState<Lang | null>(null);
   const current = useRef(prefs);
   current.current = prefs;
 
@@ -40,6 +45,25 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
       .then((p) => setPrefs(p))
       .finally(() => setLoaded(true));
   }, []);
+
+  // The language follows the setting ("system" asks macOS). The module-level
+  // language changes before the state does, so the re-render that follows
+  // shows the new language everywhere without resetting the window.
+  useEffect(() => {
+    if (!loaded) return;
+    let live = true;
+    PrefsService.ResolveLanguage(prefs.language || "system")
+      .catch(() => "en")
+      .then((l) => {
+        if (!live) return;
+        const next: Lang = l === "fr" ? "fr" : "en";
+        setLanguage(next);
+        setLang(next);
+      });
+    return () => {
+      live = false;
+    };
+  }, [loaded, prefs.language]);
 
   // Mirror the appearance on <html> too. macOS already switches the web
   // view's color scheme natively; this keeps CSS in step even before it does.
@@ -77,7 +101,9 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     [save],
   );
 
-  return <PrefsContext.Provider value={{ prefs, loaded, save, togglePin }}>{children}</PrefsContext.Provider>;
+  // Wait for the language (a quick local call) so English never flashes first.
+  if (!lang) return null;
+  return <PrefsContext.Provider value={{ prefs, loaded, save, togglePin, lang }}>{children}</PrefsContext.Provider>;
 }
 
 export const usePrefs = () => useContext(PrefsContext);

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ShehabEddin64/Cue_Space/internal/cue"
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 // Launcher opens things using the operating system.
@@ -87,7 +88,7 @@ func (r *Runner) Run(ctx context.Context, c cue.Cue) Result {
 	if arrange && (r.Arranger == nil || !r.Arranger.Ready()) {
 		arrange = false
 		res.NeedsAccessibility = true
-		res.Notes = append(res.Notes, "Windows weren’t arranged: allow Cue Space under Accessibility to use this Cue’s layout.")
+		res.Notes = append(res.Notes, i18n.T("Windows weren’t arranged: allow Cue Space under Accessibility to use this Cue’s layout."))
 	}
 	placed := map[string]bool{}
 	if arrange {
@@ -103,7 +104,7 @@ func (r *Runner) Run(ctx context.Context, c cue.Cue) Result {
 		case rsc.Disabled:
 			step.Status = StatusSkipped
 		case ctx.Err() != nil:
-			step.Status, step.Error = StatusSkipped, "cancelled"
+			step.Status, step.Error = StatusSkipped, i18n.T("cancelled")
 		default:
 			stepCtx, cancel := context.WithTimeout(ctx, timeout)
 			path, err := r.open(stepCtx, rsc)
@@ -159,15 +160,15 @@ func (r *Runner) arrange(ctx context.Context, c cue.Cue, res *Result, timeout ti
 			continue
 		}
 
-		where := "this desktop"
+		onNew := false
 		if d.Arrangement != cue.ArrangeFullScreen && d.NewDesktop {
 			deskCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			err := r.Arranger.NewDesktop(deskCtx)
 			cancel()
 			if err != nil {
-				res.Notes = append(res.Notes, fmt.Sprintf("Desktop %d: couldn’t create a new desktop (%s), so it was arranged on the current one.", i+1, err))
+				res.Notes = append(res.Notes, i18n.T("Desktop %d: couldn’t create a new desktop (%s), so it was arranged on the current one.", i+1, err))
 			} else {
-				where = "a new desktop"
+				onNew = true
 			}
 		}
 
@@ -179,7 +180,7 @@ func (r *Runner) arrange(ctx context.Context, c cue.Cue, res *Result, timeout ti
 				var note string
 				note, err = r.Arranger.Place(stepCtx, it.rsc, path, it.slot, d.Arrangement == cue.ArrangeFullScreen)
 				cancel()
-				step.Note = describePlacement(info, k, d.Arrangement, where)
+				step.Note = describePlacement(info, k, d.Arrangement, onNew)
 				if opened := openedNote(it.rsc, path); opened != "" {
 					step.Note = opened + " · " + step.Note
 				}
@@ -196,20 +197,24 @@ func (r *Runner) arrange(ctx context.Context, c cue.Cue, res *Result, timeout ti
 	}
 }
 
-func describePlacement(info cue.ArrangementInfo, k int, a cue.Arrangement, where string) string {
-	switch a {
-	case cue.ArrangeFullScreen:
-		return "Full screen on its own desktop"
-	case cue.ArrangeFill:
-		return "Fills " + where
+func describePlacement(info cue.ArrangementInfo, k int, a cue.Arrangement, onNew bool) string {
+	switch {
+	case a == cue.ArrangeFullScreen:
+		return i18n.T("Full screen on its own desktop")
+	case a == cue.ArrangeFill && onNew:
+		return i18n.T("Fills a new desktop")
+	case a == cue.ArrangeFill:
+		return i18n.T("Fills this desktop")
+	case onNew:
+		return i18n.T("%s, slot %d, on a new desktop", i18n.T(info.Title), k+1)
 	}
-	return fmt.Sprintf("%s, slot %d, on %s", info.Title, k+1, where)
+	return i18n.T("%s, slot %d, on this desktop", i18n.T(info.Title), k+1)
 }
 
 // openedNote names the file a "newest file" folder opened.
 func openedNote(rsc cue.Resource, path string) string {
 	if rsc.Type == cue.TypeFolder && rsc.Newest && path != "" {
-		return "Opened " + filepath.Base(path)
+		return i18n.T("Opened %s", filepath.Base(path))
 	}
 	return ""
 }
@@ -220,13 +225,16 @@ func (r *Runner) checkTarget(rsc cue.Resource) (string, error) {
 	switch rsc.Type {
 	case cue.TypeApp:
 		if rsc.App.IsZero() {
-			return "", errors.New("no app set")
+			return "", i18n.Errorf("no app chosen")
 		}
 	case cue.TypeFile, cue.TypeFolder:
 		path := ExpandHome(rsc.Path, r.Home)
 		info, err := os.Stat(path)
 		if errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("%s not found: %s", rsc.Type, rsc.Path)
+			if rsc.Type == cue.TypeFolder {
+				return "", i18n.Errorf("folder not found: %s", rsc.Path)
+			}
+			return "", i18n.Errorf("file not found: %s", rsc.Path)
 		}
 		if err != nil {
 			return "", err
@@ -234,7 +242,7 @@ func (r *Runner) checkTarget(rsc cue.Resource) (string, error) {
 		// macOS packages (.app, .key, …) are folders that behave like files, so
 		// only a plain folder used as "file" is not flagged; the reverse is.
 		if rsc.Type == cue.TypeFolder && !info.IsDir() {
-			return "", fmt.Errorf("expected a folder but found a file: %s", rsc.Path)
+			return "", i18n.Errorf("expected a folder but found a file: %s", rsc.Path)
 		}
 		if rsc.Type == cue.TypeFolder && rsc.Newest {
 			return NewestFile(path, rsc.Extensions)

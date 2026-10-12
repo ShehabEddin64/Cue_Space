@@ -183,6 +183,48 @@ export class Library {
     }
 }
 
+/**
+ * Problem is one thing wrong with a Cue.
+ */
+export class Problem {
+    "message": string;
+
+    /**
+     * Missing is true for a value that hasn't been filled in yet (an empty
+     * name, link or path); the editor waits for a save attempt to show these.
+     */
+    "missing": boolean;
+
+    /**
+     * Name is true for the problem about the Cue's name, which the editor
+     * shows under the name field instead of in the list.
+     */
+    "name": boolean;
+
+    /** Creates a new Problem instance. */
+    constructor($$source: Partial<Problem> = {}) {
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+        if (!("missing" in $$source)) {
+            this["missing"] = false;
+        }
+        if (!("name" in $$source)) {
+            this["name"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Problem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Problem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Problem($$parsedSource as Partial<Problem>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = ai$0.Config.createFrom;
 const $$createType1 = ai$0.Disclosure.createFrom;

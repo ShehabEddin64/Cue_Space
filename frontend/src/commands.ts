@@ -1,4 +1,5 @@
 import { AIService, Cue, displayName, Resource, SystemService, type AISettings } from "./api";
+import { msg, t } from "./i18n";
 
 /*
  * Slash commands. Most run entirely on this Mac and cost no tokens; only
@@ -6,27 +7,28 @@ import { AIService, Cue, displayName, Resource, SystemService, type AISettings }
  * the AI, and /add uses a much smaller request than a full proposal.
  */
 
+// args and description are English; show them with t().
 export type CommandDef = { name: string; args?: string; description: string; usesAI?: "always" | "sometimes" };
 
 export const homeCommands: CommandDef[] = [
-  { name: "create", args: "what it’s for", description: "Propose a new Cue", usesAI: "always" },
-  { name: "new", args: "name", description: "Create a Cue manually" },
-  { name: "start", args: "Cue name", description: "Start a Cue" },
-  { name: "open", args: "Cue name", description: "Open a Cue" },
-  { name: "help", description: "Show every command" },
+  { name: "create", args: msg("what it’s for"), description: msg("Propose a new Cue"), usesAI: "always" },
+  { name: "new", args: msg("name"), description: msg("Create a Cue manually") },
+  { name: "start", args: msg("Cue name"), description: msg("Start a Cue") },
+  { name: "open", args: msg("Cue name"), description: msg("Open a Cue") },
+  { name: "help", description: msg("Show every command") },
 ];
 
 export const cueCommands: CommandDef[] = [
-  { name: "add", args: "figma, ~/Notes, github.com/…", description: "Add items; found on your Mac first", usesAI: "sometimes" },
-  { name: "remove", args: "item", description: "Remove items" },
-  { name: "off", args: "item", description: "Skip items when the Cue starts" },
-  { name: "on", args: "item", description: "Turn items back on" },
-  { name: "rename", args: "new name", description: "Rename this Cue" },
-  { name: "icon", args: "emoji", description: "Change the icon" },
-  { name: "describe", args: "text", description: "Change the description" },
-  { name: "start", description: "Start this Cue" },
-  { name: "pin", description: "Pin or unpin this Cue" },
-  { name: "help", description: "Show every command" },
+  { name: "add", args: msg("figma, ~/Notes, github.com/…"), description: msg("Add items; found on your Mac first"), usesAI: "sometimes" },
+  { name: "remove", args: msg("item"), description: msg("Remove items") },
+  { name: "off", args: msg("item"), description: msg("Skip items when the Cue starts") },
+  { name: "on", args: msg("item"), description: msg("Turn items back on") },
+  { name: "rename", args: msg("new name"), description: msg("Rename this Cue") },
+  { name: "icon", args: msg("emoji"), description: msg("Change the icon") },
+  { name: "describe", args: msg("text"), description: msg("Change the description") },
+  { name: "start", description: msg("Start this Cue") },
+  { name: "pin", description: msg("Pin or unpin this Cue") },
+  { name: "help", description: msg("Show every command") },
 ];
 
 /** The subset that works on an unsaved AI proposal. */
@@ -94,30 +96,30 @@ export async function applyEdit(cue: Cue, text: string, ai: AISettings | null): 
 
   switch (cmd.name) {
     case "rename":
-      return cmd.arg ? done({ name: cmd.arg }, `Renamed to “${cmd.arg}”`) : nothing("Type a name after /rename");
+      return cmd.arg ? done({ name: cmd.arg }, t("Renamed to “{name}”", { name: cmd.arg })) : nothing(t("Type a name after /rename"));
     case "icon": {
       const icon = [...new Intl.Segmenter().segment(cmd.arg)][0]?.segment ?? "";
-      return icon ? done({ icon }, `Icon changed to ${icon}`) : nothing("Type or paste an emoji after /icon");
+      return icon ? done({ icon }, t("Icon changed to {icon}", { icon })) : nothing(t("Type or paste an emoji after /icon"));
     }
     case "describe":
-      return done({ description: cmd.arg }, cmd.arg ? "Description updated" : "Description cleared");
+      return done({ description: cmd.arg }, cmd.arg ? t("Description updated") : t("Description cleared"));
     case "remove":
     case "off":
     case "on": {
-      if (!cmd.arg) return nothing(`Say which item, e.g. /${cmd.name} localhost`);
+      if (!cmd.arg) return nothing(t("Say which item, e.g. /{command} localhost", { command: cmd.name }));
       const hits = matchItems(cue.resources, cmd.arg);
-      if (!hits.length) return nothing(`No item matches “${cmd.arg}”`);
+      if (!hits.length) return nothing(t("No item matches “{query}”", { query: cmd.arg }));
       const ids = new Set(hits.map((r) => r.id));
       const names = hits.map(displayName).join(", ");
-      if (cmd.name === "remove") return done({ resources: cue.resources.filter((r) => !ids.has(r.id)) }, `Removed ${names}`);
+      if (cmd.name === "remove") return done({ resources: cue.resources.filter((r) => !ids.has(r.id)) }, t("Removed {names}", { names }));
       const disabled = cmd.name === "off";
       return done(
         { resources: cue.resources.map((r) => (ids.has(r.id) ? new Resource({ ...r, disabled }) : r)) },
-        `${disabled ? "Turned off" : "Turned on"} ${names}`,
+        disabled ? t("Turned off {names}", { names }) : t("Turned on {names}", { names }),
       );
     }
     case "add": {
-      if (!cmd.arg) return nothing("Say what to add, e.g. /add figma, ~/Notes, github.com/me/repo");
+      if (!cmd.arg) return nothing(t("Say what to add, e.g. /add figma, ~/Notes, github.com/me/repo"));
       // First on this Mac: links, existing paths, installed apps. No tokens.
       const local = await SystemService.ResolveItems(cmd.arg);
       let added = [...local.resources];
@@ -129,13 +131,18 @@ export async function applyEdit(cue: Cue, text: string, ai: AISettings | null): 
           const res = await AIService.Resolve(local.unresolved);
           added = [...added, ...res.resources];
           questions = res.questions;
-          note = ` (${local.unresolved.length} with AI)`;
+          note = t(" ({n} with AI)", { n: local.unresolved.length });
         } else {
-          note = `. Couldn’t find ${local.unresolved.map((u) => `“${u}”`).join(", ")} on this Mac`;
+          note = t(". Couldn’t find {items} on this Mac", { items: local.unresolved.map((u) => `“${u}”`).join(", ") });
         }
       }
-      if (!added.length) return nothing(`Couldn’t find ${local.unresolved.map((u) => `“${u}”`).join(", ")} on this Mac. Connect an AI to resolve names like that.`);
-      return done({ resources: [...cue.resources, ...added] }, `Added ${added.map(displayName).join(", ")}${note}`, questions);
+      if (!added.length)
+        return nothing(
+          t("Couldn’t find {items} on this Mac. Connect an AI to resolve names like that.", {
+            items: local.unresolved.map((u) => `“${u}”`).join(", "),
+          }),
+        );
+      return done({ resources: [...cue.resources, ...added] }, t("Added {names}", { names: added.map(displayName).join(", ") }) + note, questions);
     }
   }
   return null;

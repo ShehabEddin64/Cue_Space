@@ -95,6 +95,11 @@ export class Prefs {
     "appearance": string;
 
     /**
+     * Language is "system" (follow macOS), "en" or "fr".
+     */
+    "language": string;
+
+    /**
      * Onboarded is true once the welcome tour has been finished or skipped.
      */
     "onboarded": boolean;
@@ -110,6 +115,9 @@ export class Prefs {
     constructor($$source: Partial<Prefs> = {}) {
         if (!("appearance" in $$source)) {
             this["appearance"] = "";
+        }
+        if (!("language" in $$source)) {
+            this["language"] = "";
         }
         if (!("onboarded" in $$source)) {
             this["onboarded"] = false;
@@ -128,14 +136,14 @@ export class Prefs {
      * Creates a new Prefs instance from a string or object.
      */
     static createFrom($$source: any = {}): Prefs {
-        const $$createField2_0 = $$createType2;
-        const $$createField3_0 = $$createType3;
+        const $$createField3_0 = $$createType2;
+        const $$createField4_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("pinned" in $$parsedSource) {
-            $$parsedSource["pinned"] = $$createField2_0($$parsedSource["pinned"]);
+            $$parsedSource["pinned"] = $$createField3_0($$parsedSource["pinned"]);
         }
         if ("home" in $$parsedSource) {
-            $$parsedSource["home"] = $$createField3_0($$parsedSource["home"]);
+            $$parsedSource["home"] = $$createField4_0($$parsedSource["home"]);
         }
         return new Prefs($$parsedSource as Partial<Prefs>);
     }

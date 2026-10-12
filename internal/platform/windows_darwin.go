@@ -291,7 +291,6 @@ import "C"
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -301,6 +300,7 @@ import (
 	"unsafe"
 
 	"github.com/ShehabEddin64/Cue_Space/internal/cue"
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 // AccessibilityTrusted reports whether Cue Space may move other apps'
@@ -352,13 +352,13 @@ func (a *Arranger) Ready() bool { return AccessibilityTrusted(false) }
 // NewDesktop adds a desktop in Mission Control and switches to it.
 func (a *Arranger) NewDesktop(ctx context.Context) error {
 	if err := exec.CommandContext(ctx, "open", "-b", "com.apple.exposelauncher").Run(); err != nil {
-		return fmt.Errorf("couldn't open Mission Control: %w", err)
+		return i18n.Errorf("couldn’t open Mission Control: %w", err)
 	}
 	var add, list C.AXUIElementRef
 	if !poll(ctx, 3*time.Second, func() bool { return C.cs_mc_find(&add, &list) == 1 }) {
 		a.dumpDock("mission-control-not-found")
 		a.closeMissionControl()
-		return errors.New("Mission Control's desktop bar didn't appear")
+		return i18n.Errorf("Mission Control’s desktop bar didn’t appear")
 	}
 	defer C.cs_release(C.CFTypeRef(add))
 	defer C.cs_release(C.CFTypeRef(list))
@@ -366,21 +366,21 @@ func (a *Arranger) NewDesktop(ctx context.Context) error {
 	before := C.cs_count(list)
 	if C.cs_press(add) != 1 {
 		a.closeMissionControl()
-		return errors.New("couldn't press Mission Control's add desktop button")
+		return i18n.Errorf("couldn’t press Mission Control’s add desktop button")
 	}
 	if !poll(ctx, 2*time.Second, func() bool { return C.cs_count(list) > before }) {
 		a.dumpDock("desktop-not-added")
 		a.closeMissionControl()
-		return errors.New("Mission Control didn't add a desktop")
+		return i18n.Errorf("Mission Control didn’t add a desktop")
 	}
 	sleep(ctx, 350*time.Millisecond) // let the new thumbnail settle
 	space := C.cs_active_space()
 	if C.cs_mc_press_last(list) != 1 {
 		a.closeMissionControl()
-		return errors.New("couldn't switch to the new desktop")
+		return i18n.Errorf("couldn’t switch to the new desktop")
 	}
 	if !poll(ctx, 2500*time.Millisecond, func() bool { return C.cs_active_space() != space }) {
-		return errors.New("macOS didn't switch to the new desktop")
+		return i18n.Errorf("macOS didn’t switch to the new desktop")
 	}
 	sleep(ctx, 600*time.Millisecond) // the switch animation
 	return nil
@@ -433,7 +433,7 @@ func (a *Arranger) Place(ctx context.Context, rsc cue.Resource, path string, slo
 		}
 		return pid > 0
 	}) {
-		return "opened, but couldn't find its window to arrange", nil
+		return i18n.T("opened, but couldn’t find its window to arrange"), nil
 	}
 
 	var win C.AXUIElementRef
@@ -446,7 +446,7 @@ func (a *Arranger) Place(ctx context.Context, rsc cue.Resource, path string, slo
 		win = C.cs_new_window(C.int(pid), before, 1)
 	}
 	if win == 0 {
-		return "opened, but it has no window to arrange", nil
+		return i18n.T("opened, but it has no window to arrange"), nil
 	}
 	defer C.cs_release(C.CFTypeRef(win))
 
@@ -459,7 +459,7 @@ func (a *Arranger) Place(ctx context.Context, rsc cue.Resource, path string, slo
 	// Only an app that was already running can have pulled us to another
 	// desktop; a fresh launch can switch away from a full-screen space too.
 	if wasRunning && C.cs_active_space() != space {
-		note = "was already open on another desktop, so it was arranged there"
+		note = i18n.T("was already open on another desktop, so it was arranged there")
 	}
 	// Let the window finish its opening animation before moving it.
 	sleep(ctx, 250*time.Millisecond)
@@ -542,7 +542,7 @@ end tell`, appleScriptString(link))
 		if err := exec.CommandContext(ctx, "osascript", "-e", script).Run(); err == nil {
 			return "", nil
 		}
-		return "opened as a tab: allow Cue Space to control Safari (System Settings › Privacy & Security › Automation) to give each link its own window",
+		return i18n.T("opened as a tab: allow Cue Space to control Safari (System Settings › Privacy & Security › Automation) to give each link its own window"),
 			a.Launcher.OpenURL(ctx, link)
 	case chromiumBrowsers[browser]:
 		return "", exec.CommandContext(ctx, "open", "-na", "-b", browser, "--args", "--new-window", link).Run()

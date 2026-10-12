@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 // ErrorKind says what went wrong in terms a person can act on.
@@ -42,34 +44,34 @@ type Error struct {
 func (e *Error) Error() string {
 	v := e.Vendor
 	if v == "" {
-		v = "The AI service"
+		v = i18n.T("The AI service")
 	}
 	switch e.Kind {
 	case KindBusy:
 		also := ""
 		if e.TriedBackup {
-			also = " and a backup model"
+			also = i18n.T(" and a backup model")
 		}
-		return fmt.Sprintf("%s is very busy right now. Cue Space tried again%s, but it’s still overloaded. Please try again in a minute.", v, also)
+		return i18n.T("%s is very busy right now. Cue Space tried again%s, but it’s still overloaded. Please try again in a minute.", v, also)
 	case KindRateLimit:
-		return fmt.Sprintf("You’re sending requests faster than %s allows on your plan. Wait a minute, then try again.", v)
+		return i18n.T("You’re sending requests faster than %s allows on your plan. Wait a minute, then try again.", v)
 	case KindQuota:
-		return fmt.Sprintf("You’ve used up today’s free %s requests. Try again tomorrow, or choose another model or AI in Settings.", v)
+		return i18n.T("You’ve used up today’s free %s requests. Try again tomorrow, or choose another model or AI in Settings.", v)
 	case KindAuth:
-		return fmt.Sprintf("%s didn’t accept your API key. Check it in Settings.", v)
+		return i18n.T("%s didn’t accept your API key. Check it in Settings.", v)
 	case KindModel:
 		if e.Model != "" {
-			return fmt.Sprintf("The model “%s” isn’t available with your key. Choose another one in Settings.", e.Model)
+			return i18n.T("The model “%s” isn’t available with your key. Choose another one in Settings.", e.Model)
 		}
-		return "That model isn’t available with your key. Choose another one in Settings."
+		return i18n.T("That model isn’t available with your key. Choose another one in Settings.")
 	case KindNetwork:
-		return fmt.Sprintf("Cue Space can’t reach %s. Check your internet connection and try again.", v)
+		return i18n.T("Cue Space can’t reach %s. Check your internet connection and try again.", v)
 	case KindLocalOff:
-		return fmt.Sprintf("%s isn’t running. Open it, then try again.", v)
+		return i18n.T("%s isn’t running. Open it, then try again.", v)
 	case KindRefused:
-		return fmt.Sprintf("%s declined this request. Try describing it differently.", v)
+		return i18n.T("%s declined this request. Try describing it differently.", v)
 	}
-	return fmt.Sprintf("%s couldn’t answer this time. Please try again.", v)
+	return i18n.T("%s couldn’t answer this time. Please try again.", v)
 }
 
 // Temporary errors are worth retrying automatically.
@@ -175,15 +177,15 @@ func withRetry(ctx context.Context, retries int, fn func() (string, error)) (str
 func retryStatus(e *Error, wait time.Duration) string {
 	v := e.Vendor
 	if v == "" {
-		v = "The AI service"
+		v = i18n.T("The AI service")
 	}
 	switch e.Kind {
 	case KindRateLimit:
-		return fmt.Sprintf("Waiting %ds for %s’s rate limit", int(wait.Round(time.Second)/time.Second), v)
+		return i18n.T("Waiting %ds for %s’s rate limit", int(wait.Round(time.Second)/time.Second), v)
 	case KindNetwork:
-		return fmt.Sprintf("Can’t reach %s, trying again", v)
+		return i18n.T("Can’t reach %s, trying again", v)
 	}
-	return fmt.Sprintf("%s is busy, trying again", v)
+	return i18n.T("%s is busy, trying again", v)
 }
 
 // completeWithBackups asks models in order: the chosen one first, with a
@@ -194,7 +196,7 @@ func completeWithBackups(ctx context.Context, models []string, ask func(model st
 	var lastErr error
 	for i, model := range models {
 		if i > 0 {
-			reportStatus(ctx, prettyModel(models[i-1])+" is busy, trying "+prettyModel(model))
+			reportStatus(ctx, i18n.T("%s is busy, trying %s", prettyModel(models[i-1]), prettyModel(model)))
 		}
 		// With backups available, don't keep a person waiting on a busy
 		// model: two quick retries, then switch.

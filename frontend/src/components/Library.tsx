@@ -1,6 +1,7 @@
 import { Pin, PinOff, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { displayName, shortcutOrder, type Cue } from "../api";
+import { msg, t, tn } from "../i18n";
 import { usePrefs } from "../prefs";
 import { CueCard, Grid } from "./HomeWidgets";
 import { Toolbar } from "./Toolbar";
@@ -8,10 +9,11 @@ import { Button, IconButton } from "./ui";
 
 type Sort = "name" | "recent" | "items";
 
+// Labels are English; shown with t().
 const sorts: [Sort, string][] = [
-  ["name", "Name"],
-  ["recent", "Recently Started"],
-  ["items", "Most Items"],
+  ["name", msg("Name")],
+  ["recent", msg("Recently Started")],
+  ["items", msg("Most Items")],
 ];
 
 /** Every Cue in one place: search, sort, pin, start. */
@@ -58,15 +60,15 @@ export function Library({
   return (
     <div className="flex h-full flex-col">
       <Toolbar
-        title="Cues"
+        title={t("Cues")}
         trailing={
           <>
-            <Button variant="ghost" size="sm" onClick={onNewBlank} title="Create a Cue Manually (⌥⌘N)">
+            <Button variant="ghost" size="sm" onClick={onNewBlank} title={t("Create a Cue Manually (⌥⌘N)")}>
               <Plus className="size-3.5" />
-              Create Manually
+              {t("Create Manually")}
             </Button>
-            <Button variant="primary" size="sm" onClick={onNew} title="New Cue (⌘N)">
-              New Cue…
+            <Button variant="primary" size="sm" onClick={onNew} title={t("New Cue (⌘N)")}>
+              {t("New Cue…")}
             </Button>
           </>
         }
@@ -80,12 +82,12 @@ export function Library({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Escape" && setQuery("")}
-                placeholder={`Search ${cues.length} Cue${cues.length === 1 ? "" : "s"}`}
-                aria-label="Search Cues"
+                placeholder={tn(cues.length, "Search {n} Cue", "Search {n} Cues")}
+                aria-label={t("Search Cues")}
                 className="h-full flex-1 bg-transparent text-[13px] placeholder:text-faint focus:outline-none"
               />
             </label>
-            <div role="radiogroup" aria-label="Sort by" className="flex gap-1 rounded-full bg-fill p-1">
+            <div role="radiogroup" aria-label={t("Sort by")} className="flex gap-1 rounded-full bg-fill p-1">
               {sorts.map(([value, label]) => (
                 <button
                   key={value}
@@ -96,7 +98,7 @@ export function Library({
                     sort === value ? "bg-surface text-ink shadow-card" : "text-graphite hover:text-ink"
                   }`}
                 >
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>
@@ -104,17 +106,17 @@ export function Library({
 
           {cues.length === 0 ? (
             <div className="mx-auto max-w-sm py-16 text-center">
-              <h2 className="text-[17px] font-semibold">No Cues yet</h2>
-              <p className="mt-1.5 text-[13px] text-graphite">Describe one on Home, or build one yourself.</p>
+              <h2 className="text-[17px] font-semibold">{t("No Cues yet")}</h2>
+              <p className="mt-1.5 text-[13px] text-graphite">{t("Describe one on Home, or build one yourself.")}</p>
               <div className="mt-5 flex justify-center gap-2">
                 <Button variant="primary" onClick={onNew}>
-                  New Cue…
+                  {t("New Cue…")}
                 </Button>
-                <Button onClick={onNewBlank}>Create Manually</Button>
+                <Button onClick={onNewBlank}>{t("Create Manually")}</Button>
               </div>
             </div>
           ) : shown.length === 0 ? (
-            <p className="py-16 text-center text-[13px] text-graphite">No Cues match “{query}”.</p>
+            <p className="py-16 text-center text-[13px] text-graphite">{t("No Cues match “{query}”.", { query })}</p>
           ) : (
             <Grid>
               {shown.map((c) => {
@@ -130,7 +132,7 @@ export function Library({
                     onStart={() => onStart(c)}
                     trailing={
                       <IconButton
-                        label={pinned ? `Unpin ${c.name}` : `Pin ${c.name}`}
+                        label={pinned ? t("Unpin {name}", { name: c.name }) : t("Pin {name}", { name: c.name })}
                         onClick={(e) => {
                           e.stopPropagation();
                           togglePin(c.id);

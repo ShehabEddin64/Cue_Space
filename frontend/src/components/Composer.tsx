@@ -2,14 +2,15 @@ import { ArrowUp, Square } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { AISettings } from "../api";
 import { parseCommand, suggestCommands, type CommandDef } from "../commands";
+import { msg, t } from "../i18n";
 import { CueMark, Kbd } from "./ui";
 
 export type ComposerHandle = { focus: () => void; setText: (t: string) => void; clear: () => void };
 
 // Specific, truthful progress instead of "Processing…" (HIG › Generative AI › Outputs).
-const progress = ["Reading what you want to do", "Matching apps on this Mac", "Putting your Cue together"];
+const progress = [msg("Reading what you want to do"), msg("Matching apps on this Mac"), msg("Putting your Cue together")];
 
-const aiLabel = { always: "Uses AI", sometimes: "AI only if needed" } as const;
+const aiLabel = { always: msg("Uses AI"), sometimes: msg("AI only if needed") };
 
 /**
  * The place to say what you want to do. Large on Home, compact when changing
@@ -199,23 +200,25 @@ export const Composer = forwardRef<
       <div className={`flex items-center justify-between gap-3 ${compact ? "px-3.5 pb-3 pt-2" : "px-5 pb-4 pt-3"}`}>
         <div className="min-w-0 truncate text-[12px] text-graphite" aria-live="polite">
           {busy ? (
-            <span className="font-medium text-ink">{busyLabel ?? progress[step]}…</span>
+            <span className="font-medium text-ink">{busyLabel ?? t(progress[step])}…</span>
           ) : typedDef ? (
             <span>
-              <span className="font-medium text-ink">/{typedDef.name}</span> {typedDef.description}
-              <span className="text-faint"> · {typedDef.usesAI ? aiLabel[typedDef.usesAI] : "No AI"}</span>
+              <span className="font-medium text-ink">/{typedDef.name}</span> {t(typedDef.description)}
+              <span className="text-faint"> · {typedDef.usesAI ? t(aiLabel[typedDef.usesAI]) : t("No AI")}</span>
             </span>
           ) : status ? (
             <span className="font-medium text-ink">{status}</span>
           ) : ready ? (
-            <button onClick={onConnect} className="truncate rounded-md hover:text-ink" title="AI settings">
+            <button onClick={onConnect} className="truncate rounded-md hover:text-ink" title={t("AI settings")}>
               {ai!.disclosure.model}
-              <span className="text-faint"> · {ai!.disclosure.local ? "On this Mac" : ai!.disclosure.vendor}</span>
-              {commands.length > 0 && <span className="text-faint"> · Type / for commands</span>}
+              <span className="text-faint"> · {ai!.disclosure.local ? t("On this Mac") : ai!.disclosure.vendor}</span>
+              {commands.length > 0 && <span className="text-faint"> · {t("Type / for commands")}</span>}
             </button>
           ) : (
             <span>
-              {commands.length > 0 ? "Type / for commands, or connect an AI to describe things" : "Bring your own AI: Gemini (free tier), Anthropic, OpenAI-compatible or a local model"}
+              {commands.length > 0
+                ? t("Type / for commands, or connect an AI to describe things")
+                : t("Bring your own AI: Gemini (free tier), Anthropic, OpenAI-compatible or a local model")}
             </span>
           )}
         </div>
@@ -223,8 +226,8 @@ export const Composer = forwardRef<
         {busy ? (
           <button
             onClick={onCancel}
-            aria-label="Stop"
-            title="Stop"
+            aria-label={t("Stop")}
+            title={t("Stop")}
             className="flex size-8 shrink-0 items-center justify-center rounded-full bg-fill text-ink hover:bg-fill-strong"
           >
             <Square className="size-3 fill-current" />
@@ -233,8 +236,8 @@ export const Composer = forwardRef<
           <button
             onClick={submit}
             disabled={!text.trim()}
-            aria-label={isCommand ? "Run command" : "Propose Cue"}
-            title={isCommand ? "Run command (Return)" : "Propose Cue (Return)"}
+            aria-label={isCommand ? t("Run command") : t("Propose Cue")}
+            title={isCommand ? t("Run command (Return)") : t("Propose Cue (Return)")}
             className="flex size-8 shrink-0 items-center justify-center rounded-full bg-red text-white shadow-[0_1px_2px_rgb(217_48_37/0.3)] transition-opacity hover:bg-red-hover disabled:opacity-30"
           >
             <ArrowUp className="size-4" strokeWidth={2.5} />
@@ -244,7 +247,7 @@ export const Composer = forwardRef<
             onClick={onConnect}
             className="h-8 shrink-0 rounded-full border border-red-text/40 px-3.5 text-[13px] font-medium text-red-text hover:bg-red-tint"
           >
-            Connect AI
+            {t("Connect AI")}
           </button>
         )}
       </div>
@@ -252,7 +255,7 @@ export const Composer = forwardRef<
       {suggestions.length > 0 && (
         <ul
           role="listbox"
-          aria-label="Commands"
+          aria-label={t("Commands")}
           className="animate-pop-in absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-hairline bg-surface p-1.5 shadow-pop"
         >
           {suggestions.map((c, i) => (
@@ -269,15 +272,15 @@ export const Composer = forwardRef<
             >
               <span className="w-[76px] shrink-0 font-mono text-[12.5px] font-medium text-ink">/{c.name}</span>
               <span className="min-w-0 flex-1 truncate text-[12.5px] text-graphite">
-                {c.description}
-                {c.args && <span className="text-faint"> · {c.args}</span>}
+                {t(c.description)}
+                {c.args && <span className="text-faint"> · {t(c.args)}</span>}
               </span>
               <span
                 className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-medium ${
                   c.usesAI ? "bg-red-tint text-red-on-tint" : "bg-fill text-graphite"
                 }`}
               >
-                {c.usesAI ? aiLabel[c.usesAI] : "No AI"}
+                {c.usesAI ? t(aiLabel[c.usesAI]) : t("No AI")}
               </span>
             </li>
           ))}

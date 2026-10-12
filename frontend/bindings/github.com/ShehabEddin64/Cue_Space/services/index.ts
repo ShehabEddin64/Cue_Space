@@ -17,5 +17,6 @@ export {
 export {
     AISettings,
     Connections,
-    Library
+    Library,
+    Problem
 } from "./models.js";

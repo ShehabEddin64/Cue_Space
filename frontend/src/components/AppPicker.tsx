@@ -1,6 +1,7 @@
 import { AppWindow, ChevronDown, RefreshCw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppRef, SystemService, type App } from "../api";
+import { t } from "../i18n";
 
 let cache: Promise<App[]> | null = null;
 function installedApps(refresh = false): Promise<App[]> {
@@ -12,7 +13,7 @@ function installedApps(refresh = false): Promise<App[]> {
 export function AppPicker({
   value,
   onChange,
-  placeholder = "Choose an app…",
+  placeholder,
   clearable,
 }: {
   value?: AppRef | null;
@@ -68,8 +69,8 @@ export function AppPicker({
       >
         <AppWindow className="size-3.5 shrink-0 text-graphite" />
         <span className={`min-w-0 flex-1 truncate ${value?.name || value?.bundleId ? "" : "text-faint"}`}>
-          {value?.name || value?.bundleId || placeholder}
-          {!installed && <span className="ml-1.5 text-red-on-tint">· not installed</span>}
+          {value?.name || value?.bundleId || placeholder || t("Choose an app…")}
+          {!installed && <span className="ml-1.5 text-red-on-tint">· {t("not installed")}</span>}
         </span>
         {clearable && value ? (
           <X
@@ -105,12 +106,12 @@ export function AppPicker({
                   setOpen(false);
                 }
               }}
-              placeholder="Search apps"
+              placeholder={t("Search apps")}
               className="h-7 w-full bg-transparent px-1.5 text-[13px] focus:outline-none"
             />
             <button
               type="button"
-              title="Rescan applications"
+              title={t("Rescan applications")}
               onClick={() => installedApps(true).then(setApps)}
               className="rounded p-1 text-graphite hover:bg-fill hover:text-ink"
             >
@@ -118,7 +119,7 @@ export function AppPicker({
             </button>
           </div>
           <div ref={list} className="max-h-64 overflow-y-auto p-1">
-            {filtered.length === 0 && <div className="px-2 py-3 text-center text-xs text-graphite">No apps found</div>}
+            {filtered.length === 0 && <div className="px-2 py-3 text-center text-xs text-graphite">{t("No apps found")}</div>}
             {filtered.map((a, i) => (
               <button
                 key={a.bundleId}

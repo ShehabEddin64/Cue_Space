@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 	"github.com/ShehabEddin64/Cue_Space/internal/tools"
 )
 
@@ -99,17 +100,17 @@ func (s *ConnectService) Status() Connections {
 func (s *ConnectService) AddToClaudeDesktop() (Connections, error) {
 	cli := s.cli()
 	if cli == "" {
-		return s.Status(), errors.New("this build of Cue Space doesn't include cuespace-cli; build the app with ./scripts/build.sh")
+		return s.Status(), i18n.Errorf("This build of Cue Space doesn’t include cuespace-cli. Build the app with ./scripts/build.sh.")
 	}
 	path := s.claudeConfigPath()
 	if _, err := os.Stat(filepath.Dir(path)); err != nil {
-		return s.Status(), errors.New("Claude Desktop doesn't seem to be installed: open it once, then try again")
+		return s.Status(), i18n.Errorf("Claude Desktop doesn’t seem to be installed. Open it once, then try again.")
 	}
 	cfg, err := s.readClaudeConfig()
 	if errors.Is(err, os.ErrNotExist) {
 		cfg = map[string]any{}
 	} else if err != nil {
-		return s.Status(), fmt.Errorf("couldn't read Claude's settings: %w", err)
+		return s.Status(), i18n.Errorf("Couldn’t read Claude’s settings: %w", err)
 	}
 	servers, _ := cfg["mcpServers"].(map[string]any)
 	if servers == nil {
@@ -118,7 +119,7 @@ func (s *ConnectService) AddToClaudeDesktop() (Connections, error) {
 	servers[mcpName] = map[string]any{"command": cli, "args": []string{"mcp"}}
 	cfg["mcpServers"] = servers
 	if err := writeJSONFile(path, cfg); err != nil {
-		return s.Status(), fmt.Errorf("couldn't update Claude's settings: %w", err)
+		return s.Status(), i18n.Errorf("Couldn’t update Claude’s settings: %w", err)
 	}
 	return s.Status(), nil
 }
@@ -133,7 +134,7 @@ func (s *ConnectService) RemoveFromClaudeDesktop() (Connections, error) {
 		delete(servers, mcpName)
 	}
 	if err := writeJSONFile(s.claudeConfigPath(), cfg); err != nil {
-		return s.Status(), fmt.Errorf("couldn't update Claude's settings: %w", err)
+		return s.Status(), i18n.Errorf("Couldn’t update Claude’s settings: %w", err)
 	}
 	return s.Status(), nil
 }

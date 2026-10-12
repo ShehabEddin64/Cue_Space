@@ -38,9 +38,9 @@ export function List(): $CancellablePromise<$models.Library> {
 /**
  * Problems lists what is wrong with a Cue, for live feedback in the editor.
  */
-export function Problems(c: cue$0.Cue): $CancellablePromise<string[]> {
+export function Problems(c: cue$0.Cue): $CancellablePromise<$models.Problem[]> {
     return $Call.ByID(1705978641, c).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType3($result);
     });
 }
 
@@ -58,12 +58,13 @@ export function Save(c: cue$0.Cue): $CancellablePromise<cue$0.Cue> {
  */
 export function Start(id: string): $CancellablePromise<runner$0.Result> {
     return $Call.ByID(4108184699, id).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType4($result);
     });
 }
 
 // Private type creation functions
 const $$createType0 = cue$0.Cue.createFrom;
 const $$createType1 = $models.Library.createFrom;
-const $$createType2 = $Create.Array($Create.Any);
-const $$createType3 = runner$0.Result.createFrom;
+const $$createType2 = $models.Problem.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = runner$0.Result.createFrom;

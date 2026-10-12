@@ -17,6 +17,7 @@ import (
 
 	"github.com/ShehabEddin64/Cue_Space/internal/ai"
 	"github.com/ShehabEddin64/Cue_Space/internal/cue"
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 	"github.com/ShehabEddin64/Cue_Space/internal/platform"
 	"github.com/ShehabEddin64/Cue_Space/internal/resolve"
 	"github.com/ShehabEddin64/Cue_Space/internal/runner"
@@ -119,16 +120,30 @@ func (s *CueService) Save(c cue.Cue) (cue.Cue, error) {
 	return s.Store.Save(c)
 }
 
+// Problem is one thing wrong with a Cue.
+type Problem struct {
+	Message string `json:"message"`
+	// Missing is true for a value that hasn't been filled in yet (an empty
+	// name, link or path); the editor waits for a save attempt to show these.
+	Missing bool `json:"missing"`
+	// Name is true for the problem about the Cue's name, which the editor
+	// shows under the name field instead of in the list.
+	Name bool `json:"name"`
+}
+
 // Problems lists what is wrong with a Cue, for live feedback in the editor.
-func (s *CueService) Problems(c cue.Cue) []string {
+func (s *CueService) Problems(c cue.Cue) []Problem {
 	c.Normalize()
+	out := []Problem{}
 	var ve *cue.ValidationError
 	if err := c.Validate(); errors.As(err, &ve) {
-		return ve.Problems
+		for i, msg := range ve.Problems {
+			out = append(out, Problem{Message: msg, Missing: ve.IsMissing(i), Name: msg == i18n.T(cue.NameMissing)})
+		}
 	} else if err != nil {
-		return []string{err.Error()}
+		out = append(out, Problem{Message: err.Error()})
 	}
-	return []string{}
+	return out
 }
 
 // Delete moves the Cue's file to the Trash.
@@ -374,7 +389,7 @@ func (s *AIService) Resolve(ctx context.Context, phrases []string) (ai.Resolutio
 // result is only a proposal: nothing is saved until the user saves it.
 func (s *AIService) Propose(ctx context.Context, description string, base *cue.Cue) (ai.Proposal, error) {
 	if strings.TrimSpace(description) == "" {
-		return ai.Proposal{}, errors.New("describe what the Cue is for")
+		return ai.Proposal{}, i18n.Errorf("Describe what the Cue is for.")
 	}
 	p, err := s.provider()
 	if err != nil {
@@ -400,6 +415,12 @@ func (s *PrefsService) ServiceStartup(context.Context, application.ServiceOption
 		platform.SetAppearance(st.Prefs.Appearance)
 	}
 	return nil
+}
+
+// ResolveLanguage turns a Language preference ("system", "en", "fr") into
+// the language to show, using the Mac's preferred language for "system".
+func (s *PrefsService) ResolveLanguage(pref string) string {
+	return i18n.Resolve(pref, platform.PreferredLanguage())
 }
 
 func (s *PrefsService) GetPrefs() (settings.Prefs, error) {

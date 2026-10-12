@@ -16,6 +16,14 @@ export function GetPrefs(): $CancellablePromise<settings$0.Prefs> {
 }
 
 /**
+ * ResolveLanguage turns a Language preference ("system", "en", "fr") into
+ * the language to show, using the Mac's preferred language for "system".
+ */
+export function ResolveLanguage(pref: string): $CancellablePromise<string> {
+    return $Call.ByID(3271032554, pref);
+}
+
+/**
  * SavePrefs stores interface preferences and applies the appearance.
  */
 export function SavePrefs(p: settings$0.Prefs): $CancellablePromise<settings$0.Prefs> {

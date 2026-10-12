@@ -1,6 +1,7 @@
 import { ArrowRight, Pin, PinOff, Undo2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { CueService, displayName, newestKind, errorMessage, ResourceType, timeAgo, type AISettings, type Cue, type Proposal } from "../api";
+import { t, tn } from "../i18n";
 import { applyEdit, cueCommands, parseCommand } from "../commands";
 import { usePrefs } from "../prefs";
 import { useProposal } from "../useProposal";
@@ -63,7 +64,7 @@ export function CueDetail({
       case "pin":
         composer.current?.clear();
         await togglePin(cue.id);
-        return say(pinned ? "Unpinned" : "Pinned to Home and the top of the sidebar");
+        return say(pinned ? t("Unpinned") : t("Pinned to Home and the top of the sidebar"));
       case "help":
         composer.current?.clear();
         return onHelp();
@@ -71,7 +72,7 @@ export function CueDetail({
     setBusy(true);
     try {
       const res = await applyEdit(cue, text, ai);
-      if (!res) return say(`There’s no /${cmd.name} here. Type / to see commands.`);
+      if (!res) return say(t("There’s no /{command} here. Type / to see commands.", { command: cmd.name }));
       if (!res.changed) return say(res.message);
       composer.current?.clear();
       if (Object.values(res.questions).some(Boolean)) {
@@ -100,9 +101,9 @@ export function CueDetail({
     <div className="flex h-full flex-col">
       <Toolbar
         trailing={
-          <Button variant="ghost" size="sm" onClick={() => togglePin(cue.id)} title={pinned ? "Unpin (⇧⌘P)" : "Pin to Home (⇧⌘P)"}>
+          <Button variant="ghost" size="sm" onClick={() => togglePin(cue.id)} title={pinned ? t("Unpin (⇧⌘P)") : t("Pin to Home (⇧⌘P)")}>
             {pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
-            {pinned ? "Unpin" : "Pin"}
+            {pinned ? t("Unpin") : t("Pin")}
           </Button>
         }
       />
@@ -119,19 +120,19 @@ export function CueDetail({
               </h1>
               {cue.description && <p className="mt-1 text-[15px] leading-normal text-graphite">{cue.description}</p>}
               <p className="mt-1.5 text-[12px] text-faint">
-                {enabled} item{enabled === 1 ? "" : "s"} · {cue.lastRunAt ? `Started ${timeAgo(cue.lastRunAt)}` : "Never started"}
-                {shortcut && ` · ${shortcut} to start`}
+                {tn(enabled, "{n} item", "{n} items")} · {cue.lastRunAt ? t("Started {time}", { time: timeAgo(cue.lastRunAt) }) : t("Never started")}
+                {shortcut && ` · ${t("{shortcut} to start", { shortcut })}`}
               </p>
             </div>
           </header>
 
           <div className="mt-6 flex gap-2.5">
-            <Button variant="primary" size="lg" busy={starting} disabled={enabled === 0} onClick={onStart} title={`Start Cue (${shortcut ?? "⌘Return"})`}>
-              Start Cue
+            <Button variant="primary" size="lg" busy={starting} disabled={enabled === 0} onClick={onStart} title={t("Start Cue ({shortcut})", { shortcut: shortcut ?? "⌘Return" })}>
+              {t("Start Cue")}
               {!starting && <ArrowRight className="size-4" />}
             </Button>
-            <Button size="lg" onClick={onEdit} title="Edit Cue (⌘E)">
-              Edit Cue
+            <Button size="lg" onClick={onEdit} title={t("Edit Cue (⌘E)")}>
+              {t("Edit Cue")}
             </Button>
           </div>
 
@@ -162,10 +163,10 @@ export function CueDetail({
                 compact
                 ai={ai}
                 busy={flow.busy === "compose" || busy}
-                busyLabel={busy ? "Updating this Cue" : flow.status || undefined}
+                busyLabel={busy ? t("Updating this Cue") : flow.status || undefined}
                 commands={cueCommands}
                 status={status}
-                placeholder="Change this Cue: /add figma, /off localhost, or describe it"
+                placeholder={t("Change this Cue: /add figma, /off localhost, or describe it")}
                 onSubmit={run}
                 onCancel={flow.cancel}
                 onConnect={onConnect}
@@ -177,7 +178,7 @@ export function CueDetail({
                 <span className="min-w-0 flex-1 truncate">{undo.message}</span>
                 <Button variant="ghost" size="sm" onClick={revert}>
                   <Undo2 className="size-3.5" />
-                  Undo
+                  {t("Undo")}
                 </Button>
               </div>
             )}
@@ -188,11 +189,11 @@ export function CueDetail({
               <SectionTitle
                 trailing={
                   <button onClick={onEdit} className="text-[12px] font-medium text-red-text hover:underline">
-                    Edit Layout
+                    {t("Edit Layout")}
                   </button>
                 }
               >
-                Desktops
+                {t("Desktops")}
               </SectionTitle>
               <DesktopStrip cue={cue} onEdit={onEdit} />
             </section>
@@ -200,10 +201,10 @@ export function CueDetail({
 
           {!flow.proposal && (
             <section className="mt-9">
-              <SectionTitle>Opens in this order</SectionTitle>
+              <SectionTitle>{t("Opens in this order")}</SectionTitle>
               {cue.resources.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-hairline px-4 py-6 text-center text-[13px] text-graphite">
-                  This Cue is empty. Try <span className="font-mono text-ink">/add</span> with a link, an app or a folder.
+                  {t("This Cue is empty. Try /add with a link, an app or a folder.")}
                 </p>
               ) : (
                 <InsetList>
@@ -217,7 +218,7 @@ export function CueDetail({
                         <div className="truncate text-[13px] font-medium">{displayName(r)}</div>
                         <div className="truncate font-mono text-[11.5px] text-graphite">{target(r)}</div>
                       </div>
-                      {r.disabled && <span className="rounded-full bg-fill px-2 py-0.5 text-[11px] text-graphite">Off</span>}
+                      {r.disabled && <span className="rounded-full bg-fill px-2 py-0.5 text-[11px] text-graphite">{t("Off")}</span>}
                     </li>
                   ))}
                 </InsetList>
@@ -238,9 +239,9 @@ function target(r: Cue["resources"][number]): string {
       return r.app?.name || r.app?.bundleId || "";
     default:
       return [
-        r.newest && `${newestKind(r.extensions).toLowerCase()} in`,
+        r.newest && t("{kind} in", { kind: newestKind(r.extensions).toLowerCase() }),
         r.path,
-        r.openWith?.name && `in ${r.openWith.name}`,
+        r.openWith?.name && t("in {app}", { app: r.openWith.name }),
       ]
         .filter(Boolean)
         .join(" ");

@@ -10,95 +10,109 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 	"github.com/ShehabEddin64/Cue_Space/schema"
 )
 
 // ValidationError lists every problem found in a Cue.
 type ValidationError struct {
 	Problems []string
+	// missing marks problems about a value that hasn't been filled in yet
+	// (an empty name, link or path), so the editor can wait until someone
+	// tries to save before pointing them out.
+	missing []bool
 }
 
 func (e *ValidationError) Error() string {
 	return "invalid cue: " + strings.Join(e.Problems, "; ")
 }
 
-// Problems about a value that hasn't been filled in yet end with this, so
-// the editor can wait until someone tries to save before pointing them out.
-const missing = " is missing"
+// IsMissing reports whether problem i is about a value not filled in yet.
+func (e *ValidationError) IsMissing(i int) bool {
+	return i < len(e.missing) && e.missing[i]
+}
 
-// NameMissing is the problem reported for a Cue without a name.
-const NameMissing = "Name" + missing
+func (e *ValidationError) add(missing bool, format string, args ...any) {
+	e.Problems = append(e.Problems, i18n.T(format, args...))
+	e.missing = append(e.missing, missing)
+}
+
+// NameMissing is the problem reported for a Cue without a name (in English).
+const NameMissing = "Name is missing"
 
 // Validate checks that a Cue is well formed. It does not touch the filesystem:
 // whether a path exists is decided when the Cue runs.
 func (c *Cue) Validate() error {
-	var p []string
+	e := &ValidationError{}
 	if c.SchemaVersion != SchemaVersion {
-		p = append(p, fmt.Sprintf("unsupported schemaVersion %d", c.SchemaVersion))
+		e.add(false, "unsupported schemaVersion %d", c.SchemaVersion)
 	}
 	if strings.TrimSpace(c.Name) == "" {
-		p = append(p, NameMissing)
+		e.add(true, NameMissing)
 	}
 	ids := map[string]bool{}
 	for i, r := range c.Resources {
-		where := fmt.Sprintf("Item %d", i+1)
+		where := i18n.T("Item %d", i+1)
 		if name := r.DisplayName(); name != "" && name != string(r.Type) {
 			where += " (" + name + ")"
 		}
 		if r.ID == "" {
-			p = append(p, where+": id is required")
+			e.add(false, "%s: id is required", where)
 		} else if ids[r.ID] {
-			p = append(p, where+": duplicate id "+r.ID)
+			e.add(false, "%s: duplicate id %s", where, r.ID)
 		}
 		ids[r.ID] = true
 
 		switch r.Type {
 		case TypeURL:
 			if r.URL == "" {
-				p = append(p, where+": link"+missing)
+				e.add(true, "%s: link is missing", where)
 			} else if err := checkURL(r.URL); err != nil {
-				p = append(p, where+": "+err.Error())
+				e.add(false, "%s: %s", where, err.Error())
 			}
 		case TypeApp:
 			if r.App.IsZero() {
-				p = append(p, where+": app"+missing)
+				e.add(true, "%s: app is missing", where)
 			}
 		case TypeFile, TypeFolder:
-			if r.Path == "" {
-				p = append(p, where+": "+string(r.Type)+missing)
-			} else if !strings.HasPrefix(r.Path, "/") && r.Path != "~" && !strings.HasPrefix(r.Path, "~/") {
-				p = append(p, where+": path must be absolute or start with ~/")
+			switch {
+			case r.Path == "" && r.Type == TypeFolder:
+				e.add(true, "%s: folder is missing", where)
+			case r.Path == "":
+				e.add(true, "%s: file is missing", where)
+			case !strings.HasPrefix(r.Path, "/") && r.Path != "~" && !strings.HasPrefix(r.Path, "~/"):
+				e.add(false, "%s: path must be absolute or start with ~/", where)
 			}
 		default:
-			p = append(p, fmt.Sprintf("%s: unknown type %q", where, r.Type))
+			e.add(false, "%s: unknown type %q", where, r.Type)
 		}
 		if r.Type != TypeFile && r.Type != TypeFolder && r.OpenWith != nil {
-			p = append(p, where+": openWith only applies to files and folders")
+			e.add(false, "%s: openWith only applies to files and folders", where)
 		}
 		if r.Newest && r.Type != TypeFolder {
-			p = append(p, where+": newest only applies to folders")
+			e.add(false, "%s: newest only applies to folders", where)
 		}
 	}
-	p = append(p, c.validateLayout()...)
-	if len(p) > 0 {
-		return &ValidationError{Problems: p}
+	c.validateLayout(e)
+	if len(e.Problems) > 0 {
+		return e
 	}
 	return nil
 }
 
 func checkURL(raw string) error {
 	if raw == "" {
-		return fmt.Errorf("url is required")
+		return i18n.Errorf("url is required")
 	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme == "" {
-		return fmt.Errorf("%q is not a full URL (include https://)", raw)
+		return i18n.Errorf("%q is not a full URL (include https://)", raw)
 	}
 	switch strings.ToLower(u.Scheme) {
 	case "javascript", "data":
-		return fmt.Errorf("%s: URLs are not allowed", u.Scheme)
+		return i18n.Errorf("%s: links are not allowed", u.Scheme)
 	case "file":
-		return fmt.Errorf("use a file or folder resource instead of a file: URL")
+		return i18n.Errorf("use a file or folder item instead of a file: link")
 	}
 	return nil
 }

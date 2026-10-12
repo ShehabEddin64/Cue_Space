@@ -4,7 +4,8 @@ import { AlertTriangle, Clock, GripVertical, HelpCircle, Trash2, X } from "lucid
 import { useEffect, useState } from "react";
 import { displayName, normalizeURL, parseExtensions, Resource, ResourceType, SystemService } from "../api";
 import { AppPicker } from "./AppPicker";
-import { Button, IconButton, Input, TypeIcon, typeNames } from "./ui";
+import { t } from "../i18n";
+import { Button, IconButton, Input, TypeIcon, typeName } from "./ui";
 
 export function ResourceRow({
   index,
@@ -46,17 +47,17 @@ export function ResourceRow({
           ref={setActivatorNodeRef}
           {...attributes}
           {...listeners}
-          aria-label="Drag to reorder"
+          aria-label={t("Drag to reorder")}
           className="no-drag mt-1.5 cursor-grab touch-none rounded p-0.5 text-faint hover:text-graphite active:cursor-grabbing"
         >
           <GripVertical className="size-4" />
         </button>
 
-        <span className="mt-[7px] w-4 shrink-0 text-right font-mono text-[11px] text-faint" aria-label={`Item ${index + 1}`}>
+        <span className="mt-[7px] w-4 shrink-0 text-right font-mono text-[11px] text-faint" aria-label={t("Item {n}", { n: index + 1 })}>
           {index + 1}
         </span>
         <div
-          title={typeNames[r.type]}
+          title={typeName(r.type)}
           className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-fill text-graphite"
         >
           <TypeIcon type={r.type} className="size-3.5" />
@@ -68,7 +69,7 @@ export function ResourceRow({
             onChange={(e) => update({ label: e.target.value })}
             placeholder={displayName(new Resource({ ...r, label: "" }))}
             spellCheck={false}
-            aria-label="Label"
+            aria-label={t("Label")}
             className="h-7 w-full rounded-md bg-transparent px-1 text-[13px] font-medium placeholder:font-normal placeholder:text-faint hover:bg-fill focus:bg-fill focus:outline-none"
           />
 
@@ -82,7 +83,7 @@ export function ResourceRow({
                 if (url !== r.url) update({ url });
               }}
               placeholder="https://"
-              aria-label="URL"
+              aria-label={t("URL")}
               className="font-mono text-xs"
             />
           )}
@@ -95,27 +96,27 @@ export function ResourceRow({
                 <Input
                   value={r.path || ""}
                   onChange={(e) => update({ path: e.target.value })}
-                  placeholder={r.type === ResourceType.TypeFolder ? "~/path/to/folder" : "~/path/to/file"}
-                  aria-label="Path"
+                  placeholder={r.type === ResourceType.TypeFolder ? t("~/path/to/folder") : t("~/path/to/file")}
+                  aria-label={t("Path")}
                   className={`font-mono text-xs ${missing ? "border-red-text/50" : ""}`}
                 />
                 <Button size="md" onClick={choosePath}>
-                  Choose…
+                  {t("Choose…")}
                 </Button>
               </div>
               {missing && (
                 <p className="flex items-center gap-1.5 px-1 text-[11px] text-red-on-tint">
                   <AlertTriangle className="size-3" />
-                  Not found on this Mac
+                  {t("Not found on this Mac")}
                 </p>
               )}
               {r.type === ResourceType.TypeFolder && <NewestOption resource={r} onChange={update} />}
               <div className="flex items-center gap-2">
-                <span className="shrink-0 pl-1 text-[11px] text-faint">Open with</span>
+                <span className="shrink-0 pl-1 text-[11px] text-faint">{t("Open with")}</span>
                 <AppPicker
                   value={r.openWith}
                   onChange={(openWith) => update({ openWith })}
-                  placeholder="Default app"
+                  placeholder={t("Default app")}
                   clearable
                 />
               </div>
@@ -126,7 +127,7 @@ export function ResourceRow({
             <div className="flex items-start gap-2 rounded-lg bg-red-tint px-2.5 py-2 text-xs text-red-on-tint">
               <HelpCircle className="mt-px size-3.5 shrink-0" />
               <span className="flex-1">{question}</span>
-              <button aria-label="Dismiss" onClick={onDismissQuestion} className="opacity-70 hover:opacity-100">
+              <button aria-label={t("Dismiss")} onClick={onDismissQuestion} className="opacity-70 hover:opacity-100">
                 <X className="size-3.5" />
               </button>
             </div>
@@ -134,8 +135,8 @@ export function ResourceRow({
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5 pt-0.5">
-          <Toggle checked={!r.disabled} onChange={(on) => update({ disabled: !on })} label={r.disabled ? "Turned off" : "Turned on"} />
-          <IconButton label="Remove" onClick={onRemove} className="hover:!text-red-text">
+          <Toggle checked={!r.disabled} onChange={(on) => update({ disabled: !on })} label={r.disabled ? t("Turned off") : t("Turned on")} />
+          <IconButton label={t("Remove")} onClick={onRemove} className="hover:!text-red-text">
             <Trash2 className="size-3.5" />
           </IconButton>
         </div>
@@ -166,18 +167,18 @@ function NewestOption({ resource: r, onChange }: { resource: Resource; onChange:
           className="size-3.5 accent-[var(--red)]"
         />
         <Clock className="size-3 text-faint" />
-        <span className={r.newest ? "font-medium text-ink" : ""}>Open the newest file inside, not the folder</span>
+        <span className={r.newest ? "font-medium text-ink" : ""}>{t("Open the newest file inside, not the folder")}</span>
       </label>
       {r.newest && (
         <div className="mt-1.5 flex items-center gap-2 pl-[22px]">
-          <span className="shrink-0 text-[11px] text-faint">Only</span>
+          <span className="shrink-0 text-[11px] text-faint">{t("Only")}</span>
           <Input
             value={types}
             onChange={(e) => setTypes(e.target.value)}
             onBlur={commit}
             onKeyDown={(e) => e.key === "Enter" && commit()}
-            placeholder="Any file, or types like pdf, docx"
-            aria-label="Only these file types"
+            placeholder={t("Any file, or types like pdf, docx")}
+            aria-label={t("Only these file types")}
             className="h-7 font-mono text-xs"
           />
         </div>
@@ -192,7 +193,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
       role="switch"
       aria-checked={checked}
       aria-label={label}
-      title={checked ? "On: opens when the Cue starts" : "Off: skipped when the Cue starts"}
+      title={checked ? t("On: opens when the Cue starts") : t("Off: skipped when the Cue starts")}
       onClick={() => onChange(!checked)}
       className={`no-drag relative mx-1 h-4 w-7 rounded-full transition-colors ${checked ? "bg-ink" : "bg-fill-strong"}`}
     >

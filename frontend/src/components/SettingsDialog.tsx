@@ -2,6 +2,7 @@ import { Browser } from "@wailsio/runtime";
 import { Check, ExternalLink, FolderOpen, KeyRound, Lock, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AIService, Config, disclosureSentence, errorMessage, Prefs, SystemService, type AISettings } from "../api";
+import { msg, t } from "../i18n";
 import { usePrefs } from "../prefs";
 import { Button, Input, Label, Sheet } from "./ui";
 
@@ -14,20 +15,28 @@ const presets = [
 
 type Provider = "" | "anthropic" | "gemini" | "openai";
 
+// Names are English; shown with t().
 const providers: [Provider, string][] = [
-  ["anthropic", "Anthropic"],
-  ["gemini", "Gemini"],
-  ["openai", "OpenAI-compatible"],
-  ["", "None"],
+  ["anthropic", msg("Anthropic")],
+  ["gemini", msg("Gemini")],
+  ["openai", msg("OpenAI-compatible")],
+  ["", msg("None")],
 ];
 
 const defaultModel: Record<string, string> = { anthropic: "claude-opus-5-5", gemini: "gemini-2.5-flash", openai: "" };
 const GEMINI_KEY_URL = "https://aistudio.google.com/apikey";
 
 const appearances: [string, string][] = [
+  ["system", msg("System")],
+  ["light", msg("Light")],
+  ["dark", msg("Dark")],
+];
+
+// Each language is named in itself, so it's findable whatever is on screen.
+const languages: [string, string][] = [
   ["system", "System"],
-  ["light", "Light"],
-  ["dark", "Dark"],
+  ["en", "English"],
+  ["fr", "Français"],
 ];
 
 export function SettingsDialog({
@@ -114,7 +123,7 @@ export function SettingsDialog({
     try {
       await persist();
       await AIService.TestConnection();
-      setStatus({ kind: "ok", text: "Connected" });
+      setStatus({ kind: "ok", text: t("Connected") });
     } catch (e) {
       setStatus({ kind: "error", text: errorMessage(e) });
     } finally {
@@ -129,7 +138,7 @@ export function SettingsDialog({
     try {
       const list = await AIService.ListModels(new Config({ provider, model, baseUrl }), key);
       setModels(list);
-      if (!list.length) setModelsError("No models found.");
+      if (!list.length) setModelsError(t("No models found."));
     } catch (e) {
       setModels([]);
       setModelsError(errorMessage(e));
@@ -154,7 +163,7 @@ export function SettingsDialog({
     provider === ""
       ? ""
       : disclosureSentence({
-          model: model || "your model",
+          model: model || t("your model"),
           vendor:
             provider === "anthropic"
               ? "Anthropic"
@@ -162,7 +171,7 @@ export function SettingsDialog({
                 ? "Google"
                 : (preset?.name ?? baseUrl.replace(/^https?:\/\//, "").split("/")[0]),
           local,
-          note: provider === "gemini" ? "On Google’s free tier, Google may use your requests to improve its products." : undefined,
+          note: provider === "gemini" ? t("On Google’s free tier, Google may use your requests to improve its products.") : undefined,
         });
 
   // Settings load from a local file in a moment; wait rather than briefly
@@ -171,7 +180,7 @@ export function SettingsDialog({
 
   return (
     <Sheet
-      title="Settings"
+      title={t("Settings")}
       onClose={onClose}
       footer={
         <>
@@ -186,18 +195,18 @@ export function SettingsDialog({
           )}
           {provider && (
             <Button busy={busy === "test"} disabled={!!busy} onClick={test}>
-              Test Connection
+              {t("Test Connection")}
             </Button>
           )}
           <Button variant="primary" busy={busy === "save"} disabled={!!busy} onClick={save}>
-            Save
+            {t("Save")}
           </Button>
         </>
       }
     >
       <section>
-        <Label hint="System follows your Mac">Appearance</Label>
-        <div role="radiogroup" aria-label="Appearance" className="grid grid-cols-3 gap-1 rounded-full bg-fill p-1">
+        <Label hint={t("System follows your Mac")}>{t("Appearance")}</Label>
+        <div role="radiogroup" aria-label={t("Appearance")} className="grid grid-cols-3 gap-1 rounded-full bg-fill p-1">
           {appearances.map(([value, name]) => (
             <button
               key={value}
@@ -208,14 +217,33 @@ export function SettingsDialog({
                 prefs.appearance === value ? "bg-surface text-ink shadow-card" : "text-graphite hover:text-ink"
               }`}
             >
-              {name}
+              {t(name)}
             </button>
           ))}
         </div>
       </section>
 
       <section className="mt-5">
-        <Label>AI for describing Cues</Label>
+        <Label hint={t("System follows your Mac")}>{t("Language")}</Label>
+        <div role="radiogroup" aria-label={t("Language")} className="grid grid-cols-3 gap-1 rounded-full bg-fill p-1">
+          {languages.map(([value, name]) => (
+            <button
+              key={value}
+              role="radio"
+              aria-checked={(prefs.language || "system") === value}
+              onClick={() => savePrefs((p) => new Prefs({ ...p, language: value }))}
+              className={`h-7 rounded-full text-[12px] font-medium transition ${
+                (prefs.language || "system") === value ? "bg-surface text-ink shadow-card" : "text-graphite hover:text-ink"
+              }`}
+            >
+              {value === "system" ? t(name) : name}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5">
+        <Label>{t("AI for describing Cues")}</Label>
         <div role="radiogroup" className="grid grid-cols-4 gap-1 rounded-full bg-fill p-1">
           {providers.map(([value, name]) => (
             <button
@@ -227,7 +255,7 @@ export function SettingsDialog({
                 provider === value ? "bg-surface text-ink shadow-card" : "text-graphite hover:text-ink"
               }`}
             >
-              {name}
+              {t(name)}
             </button>
           ))}
         </div>
@@ -235,7 +263,7 @@ export function SettingsDialog({
 
       {provider === "openai" && (
         <section className="mt-5">
-          <Label>Server</Label>
+          <Label>{t("Server")}</Label>
           <div className="mb-2 flex flex-wrap gap-1.5">
             {presets.map((p) => (
               <button
@@ -255,9 +283,9 @@ export function SettingsDialog({
 
       {provider === "gemini" && (
         <p className="mt-3 text-[12px] leading-relaxed text-graphite">
-          Gemini has a free tier. Get an API key in Google AI Studio, paste it below, then load the models your key can use.{" "}
+          {t("Gemini has a free tier. Get an API key in Google AI Studio, paste it below, then load the models your key can use.")}{" "}
           <button onClick={() => Browser.OpenURL(GEMINI_KEY_URL)} className="inline-flex items-center gap-1 font-medium text-red-text hover:underline">
-            Get a free key
+            {t("Get a free key")}
             <ExternalLink className="size-3" />
           </button>
         </p>
@@ -268,20 +296,20 @@ export function SettingsDialog({
           <Label
             hint={
               provider === "gemini"
-                ? "If it’s busy, Cue Space switches to Gemini 2.5 Flash automatically"
+                ? t("If it’s busy, Cue Space switches to Gemini 2.5 Flash automatically")
                 : defaultModel[provider]
-                  ? `Default: ${defaultModel[provider]}`
-                  : "e.g. gpt-5, llama3.2, qwen3"
+                  ? t("Default: {model}", { model: defaultModel[provider] })
+                  : t("e.g. gpt-5, llama3.2, qwen3")
             }
           >
-            Model
+            {t("Model")}
           </Label>
           <div className="flex gap-1.5">
             {models.length > 0 ? (
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                aria-label="Model"
+                aria-label={t("Model")}
                 className="h-8 min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-2 font-mono text-xs focus:border-red-text/60 focus:outline-none"
               >
                 {!models.includes(model) && model && <option value={model}>{model}</option>}
@@ -294,9 +322,9 @@ export function SettingsDialog({
             ) : (
               <Input value={model} onChange={(e) => setModel(e.target.value)} className="font-mono text-xs" />
             )}
-            <Button onClick={loadModels} busy={modelsBusy} disabled={!canList} title={canList ? "Load the models this key can use" : "Add your API key first"}>
+            <Button onClick={loadModels} busy={modelsBusy} disabled={!canList} title={canList ? t("Load the models this key can use") : t("Add your API key first")}>
               {!modelsBusy && <RefreshCw className="size-3.5" />}
-              Load Models
+              {t("Load Models")}
             </Button>
           </div>
           {modelsError && <p className="mt-1.5 text-[11.5px] text-red-text">{modelsError}</p>}
@@ -305,7 +333,7 @@ export function SettingsDialog({
 
       {provider && needsKey && (
         <section className="mt-5">
-          <Label hint={hasKey ? "Saved in your Keychain" : undefined}>API key</Label>
+          <Label hint={hasKey ? t("Saved in your Keychain") : undefined}>{t("API key")}</Label>
           <div className="flex gap-1.5">
             <div className="relative flex-1">
               <KeyRound className="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-faint" />
@@ -314,14 +342,14 @@ export function SettingsDialog({
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
                 placeholder={
-                  hasKey ? "Leave empty to keep the saved key" : provider === "anthropic" ? "sk-ant-…" : provider === "gemini" ? "AIza…" : "sk-…"
+                  hasKey ? t("Leave empty to keep the saved key") : provider === "anthropic" ? "sk-ant-…" : provider === "gemini" ? "AIza…" : "sk-…"
                 }
                 className="pl-8 font-mono text-xs"
               />
             </div>
             {hasKey && (
               <Button variant="ghost" onClick={removeKey}>
-                Remove
+                {t("Remove")}
               </Button>
             )}
           </div>
@@ -332,30 +360,30 @@ export function SettingsDialog({
         <Lock className="mt-[2px] size-3.5 shrink-0" />
         <span>
           {provider
-            ? `${where} The AI only proposes Cues for you to review. Starting a Cue never uses it.`
-            : "Without an AI you can still build and start Cues by hand. Nothing about starting a Cue depends on AI."}
+            ? `${where} ${t("The AI only proposes Cues for you to review. Starting a Cue never uses it.")}`
+            : t("Without an AI you can still build and start Cues by hand. Nothing about starting a Cue depends on AI.")}
         </span>
       </p>
 
       <section className="mt-6">
-        <Label>Use Cue Space from other AI apps</Label>
+        <Label>{t("Use Cue Space from other AI apps")}</Label>
         <div className="flex items-center gap-3 rounded-xl border border-hairline px-3 py-2.5">
           <p className="min-w-0 flex-1 text-[12px] leading-relaxed text-graphite">
-            Build Cues by chatting with Claude Desktop, Claude Code or ChatGPT, through Cue Space’s MCP server.
+            {t("Build Cues by chatting with Claude Desktop, Claude Code or ChatGPT, through Cue Space’s MCP server.")}
           </p>
           <Button size="sm" onClick={onConnectApps}>
-            Connect…
+            {t("Connect…")}
           </Button>
         </div>
       </section>
 
       <section className="mt-6">
-        <Label>Your Cues</Label>
+        <Label>{t("Your Cues")}</Label>
         <div className="flex items-center gap-2">
           <code className="min-w-0 flex-1 truncate rounded-lg bg-fill px-2.5 py-1.5 font-mono text-[11px] text-graphite">{folder}</code>
           <Button size="sm" onClick={() => SystemService.RevealCuesFolder()}>
             <FolderOpen className="size-3.5" />
-            Show in Finder
+            {t("Show in Finder")}
           </Button>
         </div>
       </section>

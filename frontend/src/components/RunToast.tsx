@@ -1,6 +1,7 @@
 import { AlertCircle, X } from "lucide-react";
 import { useEffect } from "react";
 import { Status, SystemService, type Result } from "../api";
+import { t, tn } from "../i18n";
 import { CueMark } from "./ui";
 
 export type RunReport = { cueName: string; result: Result } | { cueName: string; error: string };
@@ -14,8 +15,8 @@ export function RunToast({ report, onClose, onFix }: { report: RunReport; onClos
   // Successful runs dismiss themselves; problems stay until read.
   useEffect(() => {
     if (!ok) return;
-    const t = setTimeout(onClose, 3200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onClose, 3200);
+    return () => clearTimeout(timer);
   }, [ok, onClose]);
 
   return (
@@ -29,17 +30,17 @@ export function RunToast({ report, onClose, onFix }: { report: RunReport; onClos
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-semibold">
             {"error" in report
-              ? `Couldn’t start ${report.cueName}`
+              ? t("Couldn’t start {name}", { name: report.cueName })
               : ok
-                ? `${report.cueName} is ready`
-                : `${report.cueName} started with ${failed.length} problem${failed.length === 1 ? "" : "s"}`}
+                ? t("{name} is ready", { name: report.cueName })
+                : tn(failed.length, "{name} started with {n} problem", "{name} started with {n} problems", { name: report.cueName })}
           </p>
           {"error" in report ? (
             <p className="mt-0.5 text-[12px] text-graphite">{report.error}</p>
           ) : (
             <>
               <p className="mt-0.5 text-[12px] text-graphite">
-                Opened {opened} item{opened === 1 ? "" : "s"}
+                {tn(opened, "Opened {n} item", "Opened {n} items")}
               </p>
               {failed.length > 0 && (
                 <ul className="mt-2 space-y-1">
@@ -69,19 +70,19 @@ export function RunToast({ report, onClose, onFix }: { report: RunReport; onClos
               <div className="mt-2.5 flex gap-3">
                 {failed.length > 0 && (
                   <button onClick={onFix} className="text-[12px] font-medium text-red-text hover:underline">
-                    Fix in Editor
+                    {t("Fix in Editor")}
                   </button>
                 )}
                 {report.result.needsAccessibility && (
                   <button onClick={() => SystemService.RequestArrangeWindows()} className="text-[12px] font-medium text-red-text hover:underline">
-                    Allow Accessibility…
+                    {t("Allow Accessibility…")}
                   </button>
                 )}
               </div>
             </>
           )}
         </div>
-        <button aria-label="Dismiss" onClick={onClose} className="rounded-full p-0.5 text-faint hover:bg-fill hover:text-ink">
+        <button aria-label={t("Dismiss")} onClick={onClose} className="rounded-full p-0.5 text-faint hover:bg-fill hover:text-ink">
           <X className="size-3.5" />
         </button>
       </div>

@@ -21,6 +21,8 @@ type Settings struct {
 type Prefs struct {
 	// Appearance is "system" (follow macOS), "light" or "dark".
 	Appearance string `json:"appearance"`
+	// Language is "system" (follow macOS), "en" or "fr".
+	Language string `json:"language"`
 	// Onboarded is true once the welcome tour has been finished or skipped.
 	Onboarded bool `json:"onboarded"`
 	// Pinned lists Cue ids shown first, in this order. The first nine Cues
@@ -54,6 +56,11 @@ func (p *Prefs) Normalize() {
 	case "light", "dark":
 	default:
 		p.Appearance = "system"
+	}
+	switch p.Language {
+	case "en", "fr":
+	default:
+		p.Language = "system"
 	}
 	if p.Pinned == nil {
 		p.Pinned = []string{}

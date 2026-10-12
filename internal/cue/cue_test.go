@@ -155,4 +155,9 @@ func TestValidateMissingValues(t *testing.T) {
 	if !reflect.DeepEqual(ve.Problems, want) {
 		t.Errorf("problems =\n%q\nwant\n%q", ve.Problems, want)
 	}
+	for i, wantMissing := range []bool{true, true, true, true, false} {
+		if ve.IsMissing(i) != wantMissing {
+			t.Errorf("IsMissing(%d) = %v", i, !wantMissing)
+		}
+	}
 }

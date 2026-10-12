@@ -8,6 +8,8 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
+
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 type Anthropic struct {
@@ -52,7 +54,7 @@ func (a *Anthropic) Complete(ctx context.Context, req Request) (string, error) {
 	case anthropic.BetaStopReasonRefusal:
 		return "", &Error{Kind: KindRefused, Vendor: "Claude", Model: a.model}
 	case anthropic.BetaStopReasonMaxTokens:
-		return "", errors.New("The answer was cut off. Try a shorter description.")
+		return "", i18n.Errorf("The answer was cut off. Try a shorter description.")
 	}
 	var out strings.Builder
 	for _, block := range resp.Content {

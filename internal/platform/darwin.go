@@ -32,6 +32,14 @@ static void cs_set_appearance(int mode) {
 	});
 }
 
+// The person's first preferred language, e.g. "fr-CA". The caller frees it.
+static char *cs_preferred_language(void) {
+	@autoreleasepool {
+		NSString *l = [NSLocale preferredLanguages].firstObject ?: @"en";
+		return strdup(l.UTF8String);
+	}
+}
+
 // Returns NULL on success, or an error message the caller must free.
 static char *cs_trash(const char *path) {
 	@autoreleasepool {
@@ -62,6 +70,7 @@ import (
 	"howett.net/plist"
 
 	"github.com/ShehabEddin64/Cue_Space/internal/cue"
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 // Launcher opens things with /usr/bin/open.
@@ -94,6 +103,14 @@ func (Launcher) OpenPath(ctx context.Context, path string, with *cue.AppRef) err
 		}
 	}
 	return run(ctx, "open", "-a", with.Name, path)
+}
+
+// PreferredLanguage is the first language in System Settings › Language &
+// Region, as a BCP 47 tag such as "fr-CA".
+func PreferredLanguage() string {
+	p := C.cs_preferred_language()
+	defer C.free(unsafe.Pointer(p))
+	return C.GoString(p)
 }
 
 // SearchFiles finds files and folders under root whose name contains query,
@@ -148,9 +165,9 @@ func cleanOpenError(msg string) string {
 	case strings.Contains(msg, "Unable to find application named"),
 		strings.Contains(msg, "LSCopyApplicationURLsForBundleIdentifier"),
 		strings.Contains(msg, "-10814"):
-		return "app is not installed"
+		return i18n.T("app is not installed")
 	case strings.Contains(msg, "does not exist"):
-		return "file does not exist"
+		return i18n.T("file does not exist")
 	}
 	if i := strings.IndexByte(msg, '\n'); i > 0 {
 		msg = msg[:i]

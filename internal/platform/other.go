@@ -4,6 +4,7 @@ package platform
 
 import (
 	"context"
+	"os"
 
 	"github.com/ShehabEddin64/Cue_Space/internal/cue"
 )
@@ -27,6 +28,14 @@ func SearchFiles(context.Context, string, string, int) ([]string, error) {
 	return nil, ErrUnsupported
 }
 func OpenCueSpaceURL(context.Context, string) error { return ErrUnsupported }
+func PreferredLanguage() string {
+	for _, v := range []string{"LC_ALL", "LC_MESSAGES", "LANG"} {
+		if l := os.Getenv(v); l != "" {
+			return l
+		}
+	}
+	return "en"
+}
 
 // Arranger is a placeholder until window placement exists on other systems.
 type Arranger struct {

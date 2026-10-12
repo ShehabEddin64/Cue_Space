@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 // GeminiAPI is Google's native Gemini API endpoint.
@@ -109,7 +111,7 @@ func (g *Gemini) generate(ctx context.Context, model string, req Request) (strin
 	cand := resp.Candidates[0]
 	switch cand.FinishReason {
 	case "MAX_TOKENS":
-		return "", errors.New("The answer was cut off. Try a shorter description.")
+		return "", i18n.Errorf("The answer was cut off. Try a shorter description.")
 	case "SAFETY", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "RECITATION":
 		return "", &Error{Kind: KindRefused, Vendor: "Gemini", Model: model, Detail: "finish: " + cand.FinishReason}
 	}

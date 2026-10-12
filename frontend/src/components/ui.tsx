@@ -1,6 +1,7 @@
 import { AppWindow, File, Folder, Globe, Loader2, X } from "lucide-react";
 import { forwardRef, useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { ResourceType } from "../api";
+import { msg, t } from "../i18n";
 
 /*
  * Controls follow the identity sheet: pill shapes, Cue Red for the one primary
@@ -100,12 +101,15 @@ export function TypeIcon({ type, className = "size-4" }: { type: ResourceType; c
   return null;
 }
 
-export const typeNames: Record<string, string> = {
-  [ResourceType.TypeURL]: "Link",
-  [ResourceType.TypeApp]: "App",
-  [ResourceType.TypeFile]: "File",
-  [ResourceType.TypeFolder]: "Folder",
+const typeNames: Record<string, string> = {
+  [ResourceType.TypeURL]: msg("Link"),
+  [ResourceType.TypeApp]: msg("App"),
+  [ResourceType.TypeFile]: msg("File"),
+  [ResourceType.TypeFolder]: msg("Folder"),
 };
+
+/** "Link", "App", "File" or "Folder", in the current language. */
+export const typeName = (type: string) => t(typeNames[type] ?? type);
 
 /** The Cue Space mark: a ring (the intention) and a dot (the cue that closes it). */
 export function CueMark({
@@ -162,7 +166,7 @@ export function Sheet({
       >
         <div className="flex shrink-0 items-center justify-between px-6 pb-2 pt-5">
           <h2 className="text-[17px] font-semibold tracking-[-0.01em]">{title}</h2>
-          <IconButton label="Close" onClick={onClose}>
+          <IconButton label={t("Close")} onClick={onClose}>
             <X className="size-4" />
           </IconButton>
         </div>
@@ -207,12 +211,12 @@ export function AIErrorNotice({ message, onRetry, onSettings }: { message: strin
       <div className="flex gap-1.5">
         {onRetry && (
           <Button size="sm" variant="tinted" onClick={onRetry}>
-            Try Again
+            {t("Try Again")}
           </Button>
         )}
         {onSettings && (
           <Button size="sm" variant="ghost" onClick={onSettings}>
-            Settings
+            {t("Settings")}
           </Button>
         )}
       </div>

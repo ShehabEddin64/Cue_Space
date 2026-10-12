@@ -8,6 +8,8 @@ import (
 
 	"github.com/ShehabEddin64/Cue_Space/internal/cue"
 	"github.com/ShehabEddin64/Cue_Space/internal/platform"
+
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 // draft is the flat shape the model fills in. It is intentionally simpler than
@@ -87,6 +89,14 @@ Rules:
 - Keep the order the user would want things to open in. Do not add resources the user did not ask for, unless they are clearly implied by the activity and you mention them in notes.
 - Every field must be present; use null for fields that do not apply to the resource type.`
 
+// languageRule asks for text in the app's language when it isn't English.
+func languageRule() string {
+	if i18n.Language() == "fr" {
+		return "\n- Write the name, description, labels, notes and needsInput questions in French. Keep app names, URLs and paths as they are."
+	}
+	return ""
+}
+
 // Proposal is an AI-suggested Cue awaiting the user's review.
 type Proposal struct {
 	Cue cue.Cue `json:"cue"`
@@ -101,7 +111,7 @@ type Proposal struct {
 // set, the model edits that Cue instead of starting from scratch.
 func Propose(ctx context.Context, p Provider, description string, existing *cue.Cue, apps []platform.App) (Proposal, error) {
 	req := Request{
-		System:     systemPrompt + "\n\nInstalled apps: " + appList(apps),
+		System:     systemPrompt + languageRule() + "\n\nInstalled apps: " + appList(apps),
 		User:       userPrompt(description, existing),
 		SchemaName: "cue_draft",
 		Schema:     draftSchema,
@@ -232,10 +242,10 @@ func parseDraft(text string) (draft, error) {
 	var d draft
 	// Some local models wrap JSON in a code fence despite the schema.
 	if err := json.Unmarshal([]byte(stripFence(text)), &d); err != nil {
-		return d, fmt.Errorf("the model's answer was not a valid Cue: %w", err)
+		return d, i18n.Errorf("The AI’s answer wasn’t a valid Cue. Please try again. (%w)", err)
 	}
 	if strings.TrimSpace(d.Name) == "" {
-		return d, fmt.Errorf("the model's answer had no name")
+		return d, i18n.Errorf("The AI’s answer had no name. Please try again.")
 	}
 	return d, nil
 }
@@ -260,7 +270,7 @@ func (d draft) toProposal(apps []platform.App) Proposal {
 			app, ok := resolveApp(apps, "", str(dr.AppName))
 			r.App = app
 			if !ok && question == "" {
-				question = fmt.Sprintf("%q doesn't seem to be installed. Pick an app or remove this item.", app.Name)
+				question = i18n.T("“%s” doesn’t seem to be installed. Pick an app or remove this item.", app.Name)
 			}
 		case cue.TypeFile, cue.TypeFolder:
 			r.Path = str(dr.Path)
@@ -272,7 +282,7 @@ func (d draft) toProposal(apps []platform.App) Proposal {
 				app, ok := resolveApp(apps, "", name)
 				r.OpenWith = app
 				if !ok && question == "" {
-					question = fmt.Sprintf("%q doesn't seem to be installed. Pick another app to open this with.", app.Name)
+					question = i18n.T("“%s” doesn’t seem to be installed. Pick another app to open this with.", app.Name)
 				}
 			}
 		default:

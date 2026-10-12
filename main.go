@@ -14,6 +14,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 	"github.com/ShehabEddin64/Cue_Space/internal/platform"
 	"github.com/ShehabEddin64/Cue_Space/internal/runner"
 	"github.com/ShehabEddin64/Cue_Space/internal/secrets"
@@ -85,8 +86,31 @@ func main() {
 		},
 	})
 
-	menu, refreshCues := menuBar(app, cues, settingsFile)
-	app.Menu.Set(menu)
+	// Messages and the menu bar follow the Language setting.
+	st0, _ := settingsFile.Load()
+	lastLang := i18n.Resolve(st0.Prefs.Language, platform.PreferredLanguage())
+	i18n.SetLanguage(lastLang)
+
+	// The menu bar is rebuilt when the language changes; refreshCues
+	// always points at the current one.
+	var menuMu sync.Mutex
+	var refreshMenu func()
+	setMenu := func() {
+		menu, refresh := menuBar(app, cues, settingsFile)
+		app.Menu.Set(menu)
+		menuMu.Lock()
+		refreshMenu = refresh
+		menuMu.Unlock()
+	}
+	refreshCues := func() {
+		menuMu.Lock()
+		r := refreshMenu
+		menuMu.Unlock()
+		if r != nil {
+			r()
+		}
+	}
+	setMenu()
 
 	// The desktop widget reads a snapshot of the Cues from the data folder.
 	exe, _ := os.Executable()
@@ -104,9 +128,17 @@ func main() {
 		refreshCues()
 		updateWidgets()
 	}
-	// Only pins change the menu and widget; greeting edits and the like don't.
+	// Only pins and the language change the menu and widget; greeting edits
+	// and the like don't.
 	var lastPinned string
 	prefsService.OnChange = func(p settings.Prefs) {
+		if lang := i18n.Resolve(p.Language, platform.PreferredLanguage()); lang != lastLang {
+			lastLang = lang
+			i18n.SetLanguage(lang)
+			setMenu()
+			updateWidgets()
+			return
+		}
 		if pinned := strings.Join(p.Pinned, ","); pinned != lastPinned {
 			lastPinned = pinned
 			refreshCues()
@@ -153,7 +185,7 @@ func menuBar(app *application.App, cues *store.Store, prefs *settings.File) (*ap
 	appMenu := menu.AddSubmenu("Cue Space")
 	appMenu.AddRole(application.About)
 	appMenu.AddSeparator()
-	appMenu.Add("Settings…").SetAccelerator("CmdOrCtrl+,").OnClick(send("settings"))
+	appMenu.Add(i18n.T("Settings…")).SetAccelerator("CmdOrCtrl+,").OnClick(send("settings"))
 	appMenu.AddSeparator()
 	appMenu.AddRole(application.ServicesMenu)
 	appMenu.AddSeparator()
@@ -163,34 +195,37 @@ func menuBar(app *application.App, cues *store.Store, prefs *settings.File) (*ap
 	appMenu.AddSeparator()
 	appMenu.AddRole(application.Quit)
 
-	file := menu.AddSubmenu("File")
-	file.Add("New Cue…").SetAccelerator("CmdOrCtrl+N").OnClick(send("new-cue"))
-	file.Add("New Cue Manually").SetAccelerator("CmdOrCtrl+Alt+N").OnClick(send("new-blank-cue"))
+	file := menu.AddSubmenu(i18n.T("File"))
+	file.Add(i18n.T("New Cue…")).SetAccelerator("CmdOrCtrl+N").OnClick(send("new-cue"))
+	file.Add(i18n.T("New Cue Manually")).SetAccelerator("CmdOrCtrl+Alt+N").OnClick(send("new-blank-cue"))
 	file.AddSeparator()
-	file.Add("Connect AI Apps…").OnClick(send("connect"))
-	file.Add("Show Cues Folder in Finder").OnClick(send("reveal-folder"))
+	file.Add(i18n.T("Connect AI Apps…")).OnClick(send("connect"))
+	file.Add(i18n.T("Show Cues Folder in Finder")).OnClick(send("reveal-folder"))
 	file.AddSeparator()
 	file.AddRole(application.CloseWindow)
 
 	menu.AddRole(application.EditMenu)
 
-	view := menu.AddSubmenu("View")
-	view.Add("Home").SetAccelerator("CmdOrCtrl+Shift+H").OnClick(send("home"))
-	view.Add("All Cues").SetAccelerator("CmdOrCtrl+Shift+C").OnClick(send("library"))
-	view.Add("Recently Used").SetAccelerator("CmdOrCtrl+Shift+R").OnClick(send("recents"))
-	view.Add("Find Cue").SetAccelerator("CmdOrCtrl+F").OnClick(send("find"))
+	view := menu.AddSubmenu(i18n.T("View"))
+	view.Add(i18n.T("Home")).SetAccelerator("CmdOrCtrl+Shift+H").OnClick(send("home"))
+	view.Add(i18n.T("All Cues")).SetAccelerator("CmdOrCtrl+Shift+C").OnClick(send("library"))
+	view.Add(i18n.T("Recently Used")).SetAccelerator("CmdOrCtrl+Shift+R").OnClick(send("recents"))
+	view.Add(i18n.T("Find Cue")).SetAccelerator("CmdOrCtrl+F").OnClick(send("find"))
 	view.AddSeparator()
-	view.Add("Customize Home…").OnClick(send("customize-home"))
-	view.Add("Toggle Sidebar").SetAccelerator("CmdOrCtrl+Ctrl+S").OnClick(send("toggle-sidebar"))
+	view.Add(i18n.T("Customize Home…")).OnClick(send("customize-home"))
+	view.Add(i18n.T("Toggle Sidebar")).SetAccelerator("CmdOrCtrl+Ctrl+S").OnClick(send("toggle-sidebar"))
 	view.AddRole(application.ToggleFullscreen)
 
-	cuesMenu := menu.AddSubmenu("Cues")
+	cuesMenu := menu.AddSubmenu(i18n.T("Cues"))
 
 	menu.AddRole(application.WindowMenu)
 
-	help := menu.AddSubmenu("Help")
-	help.Add("Welcome Tour").OnClick(send("tour"))
-	help.Add("Keyboard Shortcuts").SetAccelerator("CmdOrCtrl+/").OnClick(send("shortcuts"))
+	help := menu.AddSubmenu(i18n.T("Help"))
+	help.Add(i18n.T("Tutorial")).SetAccelerator("CmdOrCtrl+Shift+T").OnClick(send("tutorial"))
+	help.Add(i18n.T("Welcome Tour")).OnClick(send("tour"))
+	help.Add(i18n.T("Keyboard Shortcuts")).SetAccelerator("CmdOrCtrl+/").OnClick(send("shortcuts"))
+
+	localizeSystemItems(menu)
 
 	var mu sync.Mutex
 	refresh := func() {
@@ -205,24 +240,64 @@ func menuBar(app *application.App, cues *store.Store, prefs *settings.File) (*ap
 			if i == 9 {
 				break
 			}
-			label := "Start " + c.Name
+			label := i18n.T("Start %s", c.Name)
 			if c.Icon != "" {
 				label = c.Icon + "  " + label
 			}
 			cuesMenu.Add(label).SetAccelerator(fmt.Sprintf("CmdOrCtrl+%d", i+1)).OnClick(send("start:" + c.ID))
 		}
 		if len(ordered) == 0 {
-			cuesMenu.Add("No Cues Yet").SetEnabled(false)
+			cuesMenu.Add(i18n.T("No Cues Yet")).SetEnabled(false)
 		}
 		cuesMenu.AddSeparator()
-		cuesMenu.Add("Start This Cue").SetAccelerator("CmdOrCtrl+Return").OnClick(send("start-cue"))
-		cuesMenu.Add("Edit This Cue").SetAccelerator("CmdOrCtrl+E").OnClick(send("edit-cue"))
-		cuesMenu.Add("Pin or Unpin This Cue").SetAccelerator("CmdOrCtrl+Shift+P").OnClick(send("pin-cue"))
-		cuesMenu.Add("Move This Cue to Trash…").OnClick(send("delete-cue"))
+		cuesMenu.Add(i18n.T("Start This Cue")).SetAccelerator("CmdOrCtrl+Return").OnClick(send("start-cue"))
+		cuesMenu.Add(i18n.T("Edit This Cue")).SetAccelerator("CmdOrCtrl+E").OnClick(send("edit-cue"))
+		cuesMenu.Add(i18n.T("Pin or Unpin This Cue")).SetAccelerator("CmdOrCtrl+Shift+P").OnClick(send("pin-cue"))
+		cuesMenu.Add(i18n.T("Move This Cue to Trash…")).OnClick(send("delete-cue"))
 		menu.Update()
 	}
 	refresh()
 	return menu, refresh
+}
+
+// localizeSystemItems translates the standard items Wails adds (Edit,
+// Window, Hide, Quit…), which it labels in English.
+func localizeSystemItems(menu *application.Menu) {
+	roles := []struct {
+		role  application.Role
+		label string
+	}{
+		{application.About, "About Cue Space"},
+		{application.Hide, "Hide Cue Space"},
+		{application.HideOthers, "Hide Others"},
+		{application.UnHide, "Show All"},
+		{application.Quit, "Quit Cue Space"},
+		{application.CloseWindow, "Close Window"},
+		{application.Undo, "Undo"},
+		{application.Redo, "Redo"},
+		{application.Cut, "Cut"},
+		{application.Copy, "Copy"},
+		{application.Paste, "Paste"},
+		{application.PasteAndMatchStyle, "Paste and Match Style"},
+		{application.Delete, "Delete"},
+		{application.SelectAll, "Select All"},
+		{application.StartSpeaking, "Start Speaking"},
+		{application.StopSpeaking, "Stop Speaking"},
+		{application.ToggleFullscreen, "Enter Full Screen"},
+		{application.Minimise, "Minimize"},
+		{application.Zoom, "Zoom"},
+		{application.Front, "Bring All to Front"},
+	}
+	for _, r := range roles {
+		if item := menu.FindByRole(r.role); item != nil {
+			item.SetLabel(i18n.T(r.label))
+		}
+	}
+	for _, label := range []string{"Edit", "Window", "Speech", "Services"} {
+		if item := menu.FindByLabel(label); item != nil {
+			item.SetLabel(i18n.T(label))
+		}
+	}
 }
 
 // RunEvent tells the frontend about a Cue started from outside the window.

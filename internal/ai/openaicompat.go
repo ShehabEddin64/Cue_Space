@@ -12,6 +12,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/ShehabEddin64/Cue_Space/internal/i18n"
 )
 
 // OpenAICompat talks to any server that implements the OpenAI chat
@@ -144,7 +146,7 @@ func (o *OpenAICompat) completeWith(ctx context.Context, model string, req Reque
 		return "", &Error{Kind: KindOther, Vendor: o.vendor, Model: model, Detail: "no choices in response"}
 	}
 	if resp.Choices[0].FinishReason == "length" {
-		return "", errors.New("The answer was cut off. Try a shorter description.")
+		return "", i18n.Errorf("The answer was cut off. Try a shorter description.")
 	}
 	return resp.Choices[0].Message.Content, nil
 }
