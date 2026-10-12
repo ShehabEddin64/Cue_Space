@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Cue Space
+Comment=A cuespace application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/cuespace %u
+Terminal=false
+Type=Application
+Icon=cuespace
+Categories=Utility;
+StartupWMClass=cuespace
+
+ 

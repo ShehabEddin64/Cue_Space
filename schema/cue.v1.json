@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ShehabEddin64/Cue_Space/schema/cue.v1.json",
+  "title": "Cue",
+  "description": "A saved context: everything needed for one activity. Running a Cue opens its enabled resources in order.",
+  "type": "object",
+  "required": ["schemaVersion", "name", "resources"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "icon": { "type": "string", "maxLength": 16, "description": "An emoji shown on the Cue card." },
+    "description": { "type": "string", "maxLength": 500 },
+    "resources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/resource" }
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "lastRunAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "appRef": {
+      "type": "object",
+      "description": "An installed application, identified by bundle id (preferred) or name.",
+      "properties": {
+        "bundleId": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "anyOf": [
+        { "required": ["bundleId"] },
+        { "required": ["name"] }
+      ],
+      "additionalProperties": false
+    },
+    "resource": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["url", "app", "file", "folder"] },
+        "label": { "type": "string", "maxLength": 120 },
+        "disabled": { "type": "boolean", "description": "Skipped when the Cue runs." },
+        "url": { "type": "string", "description": "For type url. Any scheme except javascript: and file:." },
+        "app": { "$ref": "#/$defs/appRef", "description": "For type app." },
+        "path": { "type": "string", "description": "For type file or folder. Absolute, or starting with ~/." },
+        "openWith": { "$ref": "#/$defs/appRef", "description": "For type file or folder: the app to open it with." }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "url" } } }, "then": { "required": ["url"] } },
+        { "if": { "properties": { "type": { "const": "app" } } }, "then": { "required": ["app"] } },
+        { "if": { "properties": { "type": { "enum": ["file", "folder"] } } }, "then": { "required": ["path"] } }
+      ],
+      "additionalProperties": false
+    }
+  }
+}
