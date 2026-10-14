@@ -56,6 +56,8 @@
   nav .links a { text-decoration: none; opacity: .85; }
   nav .links a:hover { opacity: 1; }
   nav .btn { height: 40px; padding: 0 18px; font-size: 15px; }
+  .lang { height: 40px; min-width: 52px; padding: 0 14px; border-radius: 999px; border: 1.5px solid currentColor; background: transparent; color: inherit; font: 600 14px var(--mono); letter-spacing: .08em; cursor: pointer; }
+  .lang:hover { background: rgba(255,255,255,.14); }
 
   /* Hero */
   .hero { background: var(--red); color: #fff; padding-bottom: 96px; overflow: hidden; }
@@ -118,7 +120,7 @@
     .steps, .cards { grid-template-columns: 1fr; }
     .shots { grid-template-columns: 1fr; }
     nav .links { display: none; }
-    nav .btn { margin-left: auto; }
+    .lang { margin-left: auto; }
     section { padding: 80px 0; }
     .video-card { transform: none; }
   }
@@ -138,31 +140,32 @@
         cue space
       </a>
       <div class="links">
-        <a href="#how">How it works</a>
+        <a href="#how" data-i18n="nav.how">How it works</a>
         <a href="#claude">Claude</a>
-        <a href="#details">Features</a>
+        <a href="#details" data-i18n="nav.features">Features</a>
         <a href="https://github.com/ShehabEddin64/Cue_Space">GitHub</a>
       </div>
-      <a class="btn btn-ink" href="https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg">Download</a>
+      <button class="lang" id="lang" type="button" aria-label="Lire en français">FR</button>
+      <a class="btn btn-ink" href="https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg" data-i18n="nav.download">Download</a>
     </nav>
 
     <div class="grid">
       <div>
-        <p class="eyebrow">Free · Open source · For Mac</p>
-        <h1>your mac thinks in apps. you think in <span class="hl">activities.</span></h1>
-        <p class="lede">Save an activity as a Cue. One click opens its links, apps, files and folders, arranged across your desktops.</p>
+        <p class="eyebrow" data-i18n="hero.eyebrow">Free · Open source · For Mac</p>
+        <h1 data-i18n="hero.title">your mac thinks in apps. you think in <span class="hl">activities.</span></h1>
+        <p class="lede" data-i18n="hero.lede">Save an activity as a Cue. One click opens its links, apps, files and folders, arranged across your desktops.</p>
         <div class="btns">
           <a class="btn btn-ink" href="https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>
-            Download for Mac
+            <span data-i18n="dl">Download for Mac</span>
           </a>
-          <a class="btn btn-line" href="https://github.com/ShehabEddin64/Cue_Space">View on GitHub</a>
+          <a class="btn btn-line" href="https://github.com/ShehabEddin64/Cue_Space" data-i18n="hero.github">View on GitHub</a>
         </div>
-        <p class="meta">macOS 12+ · Apple silicon &amp; Intel · Signed &amp; notarized</p>
+        <p class="meta" data-i18n="hero.meta">macOS 12+ · Apple silicon &amp; Intel · Signed &amp; notarized</p>
       </div>
       <div class="video-card">
         <div class="bar"><b style="background:#ff5f57"></b><b style="background:#febc2e"></b><b style="background:#28c840"></b><span>cue space · 20 s</span><button class="sound" id="sound" type="button" aria-pressed="false">Sound on</button></div>
-        <video id="demo" src="media/demo.mp4" poster="media/demo-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="A 20-second demo of Cue Space"></video>
+        <video id="demo" src="media/demo-no-music.mp4" poster="media/demo-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="A 20-second demo of Cue Space" data-i18n-alt="alt.video"></video>
       </div>
     </div>
   </div>
@@ -173,29 +176,29 @@
     <div class="wrap">
       <div class="head">
         <div>
-          <p class="eyebrow">How it works</p>
-          <h2>one click. <span class="hl">everything opens.</span></h2>
+          <p class="eyebrow" data-i18n="how.eyebrow">How it works</p>
+          <h2 data-i18n="how.title">one click. <span class="hl">everything opens.</span></h2>
         </div>
-        <p>A Cue is a saved activity, like “Study linear algebra” or “Work on Atlas”: everything it needs, in order.</p>
+        <p data-i18n="how.lede">A Cue is a saved activity, like “Study linear algebra” or “Work on Atlas”: everything it needs, in order.</p>
       </div>
       <div class="steps">
         <div class="step">
-          <img src="media/proposal.png" alt="An AI-proposed Cue ready to review" loading="lazy">
-          <p class="n">01 · DESCRIBE IT</p>
-          <h3>Say what you want to do.</h3>
-          <p>Your own AI proposes the Cue with apps you actually have. Or build it by hand: AI is never required.</p>
+          <img src="media/proposal.png" alt="An AI-proposed Cue ready to review" data-i18n-alt="alt.proposal" loading="lazy">
+          <p class="n" data-i18n="s1.n">01 · DESCRIBE IT</p>
+          <h3 data-i18n="s1.t">Say what you want to do.</h3>
+          <p data-i18n="s1.p">Your own AI proposes the Cue with apps you actually have. Or build it by hand: AI is never required.</p>
         </div>
         <div class="step">
-          <img src="media/cue.png" alt="A Cue’s page with its Start button" loading="lazy">
-          <p class="n">02 · START IT</p>
-          <h3>One click, or ⌘1.</h3>
-          <p>Links, apps, files and folders open in order. Starting a Cue never uses AI, so it works the same every time.</p>
+          <img src="media/cue.png" alt="A Cue’s page with its Start button" data-i18n-alt="alt.cue" loading="lazy">
+          <p class="n" data-i18n="s2.n">02 · START IT</p>
+          <h3 data-i18n="s2.t">One click, or ⌘1.</h3>
+          <p data-i18n="s2.p">Links, apps, files and folders open in order. Starting a Cue never uses AI, so it works the same every time.</p>
         </div>
         <div class="step">
-          <img src="media/layout.png" alt="Choosing where windows go on a desktop" loading="lazy">
-          <p class="n">03 · ARRANGE IT</p>
-          <h3>Windows land where you want.</h3>
-          <p>Full screen on its own desktop, side by side, quarters or thirds, with a Mission Control-style preview.</p>
+          <img src="media/layout.png" alt="Choosing where windows go on a desktop" data-i18n-alt="alt.layout" loading="lazy">
+          <p class="n" data-i18n="s3.n">03 · ARRANGE IT</p>
+          <h3 data-i18n="s3.t">Windows land where you want.</h3>
+          <p data-i18n="s3.p">Full screen on its own desktop, side by side, quarters or thirds, with a Mission Control-style preview.</p>
         </div>
       </div>
     </div>
@@ -204,16 +207,16 @@
   <section id="claude" class="on-night">
     <div class="wrap claude">
       <div class="copy">
-        <p class="eyebrow" style="color:var(--red-night);margin-bottom:18px">Claude &amp; ChatGPT</p>
-        <h2>or just <span class="hl">ask claude.</span></h2>
-        <p>Cue Space includes an <b>MCP server</b>. Connect Claude Desktop in one click, or Claude Code and ChatGPT, and build Cues by chatting. It finds your real apps and folders, and only starts a Cue when you ask.</p>
-        <div class="term" style="margin-top:28px">
+        <p class="eyebrow" style="color:var(--red-night);margin-bottom:18px" data-i18n="claude.eyebrow">Claude &amp; ChatGPT</p>
+        <h2 data-i18n="claude.title">or just <span class="hl">ask claude.</span></h2>
+        <p data-i18n="claude.p">Cue Space includes an <b>MCP server</b>. Connect Claude Desktop in one click, or Claude Code and ChatGPT, and build Cues by chatting. It finds your real apps and folders, and only starts a Cue when you ask.</p>
+        <div class="term" style="margin-top:28px" data-i18n="claude.term">
           <div><span class="p">&gt;</span> make me a cue for my morning:<br>&nbsp;&nbsp;mail, calendar and notion.</div>
           <div class="dim">● cue space · create_cue <span class="ok">✓</span></div>
           <div>created ☀️ morning check-in.</div>
         </div>
       </div>
-      <img src="media/connect.png" alt="The Connect AI Apps sheet" loading="lazy">
+      <img src="media/connect.png" alt="The Connect AI Apps sheet" data-i18n-alt="alt.connect" loading="lazy">
     </div>
   </section>
 
@@ -221,35 +224,35 @@
     <div class="wrap">
       <div class="head">
         <div>
-          <p class="eyebrow">The details</p>
-          <h2>small things, <span class="hl">big time saved.</span></h2>
+          <p class="eyebrow" data-i18n="details.eyebrow">The details</p>
+          <h2 data-i18n="details.title">small things, <span class="hl">big time saved.</span></h2>
         </div>
-        <p>Everything stays on your Mac: no account, no cloud. Your Cues are plain files you own.</p>
+        <p data-i18n="details.p">Everything stays on your Mac: no account, no cloud. Your Cues are plain files you own.</p>
       </div>
       <div class="cards">
-        <div class="card"><p class="k">Newest file</p><h3>Open your latest download.</h3><p>Point at a folder and Cue Space opens the most recent file in it, optionally only PDFs.</p></div>
-        <div class="card"><p class="k">Commands</p><h3>Type, don’t click.</h3><p><code>/add figma, ~/Notes</code>, <code>/off localhost</code>, <code>/start atlas</code>. Most run without any AI.</p></div>
-        <div class="card"><p class="k">Shortcuts</p><h3>⌘1–⌘9 and a widget.</h3><p>Start your favorite Cues from the keyboard, the menu bar or your desktop.</p></div>
-        <div class="card"><p class="k">Home</p><h3>Arrange it like widgets.</h3><p>Pin, reorder and resize sections; see what you used recently. Light or dark.</p></div>
-        <div class="card"><p class="k">Languages</p><h3>English et français.</h3><p>The whole app, its menus and its AI proposals follow your language.</p></div>
-        <div class="card"><p class="k">Your AI</p><h3>Bring your own, or none.</h3><p>Gemini’s free tier, Anthropic, OpenAI-compatible or a local model. Keys stay in your Keychain.</p></div>
+        <div class="card" data-i18n="c1"><p class="k">Newest file</p><h3>Open your latest download.</h3><p>Point at a folder and Cue Space opens the most recent file in it, optionally only PDFs.</p></div>
+        <div class="card" data-i18n="c2"><p class="k">Commands</p><h3>Type, don’t click.</h3><p><code>/add figma, ~/Notes</code>, <code>/off localhost</code>, <code>/start atlas</code>. Most run without any AI.</p></div>
+        <div class="card" data-i18n="c3"><p class="k">Shortcuts</p><h3>⌘1–⌘9 and a widget.</h3><p>Start your favorite Cues from the keyboard, the menu bar or your desktop.</p></div>
+        <div class="card" data-i18n="c4"><p class="k">Home</p><h3>Arrange it like widgets.</h3><p>Pin, reorder and resize sections; see what you used recently. Light or dark.</p></div>
+        <div class="card" data-i18n="c5"><p class="k">Languages</p><h3>English et français.</h3><p>The whole app, its menus and its AI proposals follow your language.</p></div>
+        <div class="card" data-i18n="c6"><p class="k">Your AI</p><h3>Bring your own, or none.</h3><p>Gemini’s free tier, Anthropic, OpenAI-compatible or a local model. Keys stay in your Keychain.</p></div>
       </div>
       <div class="shots">
-        <img src="media/customize.png" alt="Customizing Home with section sizes" loading="lazy">
-        <img src="media/tutorial.png" alt="The built-in Tutorial" loading="lazy">
+        <img src="media/customize.png" alt="Customizing Home with section sizes" data-i18n-alt="alt.customize" loading="lazy">
+        <img src="media/tutorial.png" alt="The built-in Tutorial" data-i18n-alt="alt.tutorial" loading="lazy">
       </div>
     </div>
   </section>
 
   <section class="cta">
     <div class="wrap">
-      <h2>start your <span class="hl">first cue.</span></h2>
+      <h2 data-i18n="cta.title">start your <span class="hl">first cue.</span></h2>
       <div class="btns">
         <a class="btn btn-ink" href="https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>
-          Download for Mac
+          <span data-i18n="dl">Download for Mac</span>
         </a>
-        <a class="btn btn-line" href="https://github.com/ShehabEddin64/Cue_Space">Star on GitHub</a>
+        <a class="btn btn-line" href="https://github.com/ShehabEddin64/Cue_Space" data-i18n="cta.github">Star on GitHub</a>
       </div>
     </div>
   </section>
@@ -257,20 +260,99 @@
 
 <footer>
   <div class="wrap">
-    <span>cue space · MIT license</span>
+    <span data-i18n="foot.license">cue space · MIT license</span>
     <a href="https://github.com/ShehabEddin64/Cue_Space">github</a>
     <a href="https://github.com/ShehabEddin64/Cue_Space/blob/main/docs/guide.md">guide</a>
-    <span>built with <a href="https://claude.com/claude-code">claude code</a> · demo made with <a href="https://github.com/latent-spaces/brag">/brag</a></span>
+    <span data-i18n="foot.built">built with <a href="https://claude.com/claude-code">claude code</a> · demo made with <a href="https://github.com/latent-spaces/brag">/brag</a></span>
   </div>
 </footer>
 
 <script>
+  // French. Keys match data-i18n (inner HTML) and data-i18n-alt (alt or
+  // aria-label). English stays in the page itself.
+  const FR = {
+    "nav.how": "Comment ça marche",
+    "nav.features": "Fonctions",
+    "nav.download": "Télécharger",
+    "hero.eyebrow": "Gratuit · Open source · Pour Mac",
+    "hero.title": 'votre mac pense en apps. vous pensez en <span class="hl">activités.</span>',
+    "hero.lede": "Enregistrez une activité dans un Cue. Un clic ouvre ses liens, apps, fichiers et dossiers, disposés sur vos bureaux.",
+    "dl": "Télécharger pour Mac",
+    "hero.github": "Voir sur GitHub",
+    "hero.meta": "macOS 12+ · Apple silicon et Intel · Signé et notarisé",
+    "how.eyebrow": "Comment ça marche",
+    "how.title": 'un clic. <span class="hl">tout s’ouvre.</span>',
+    "how.lede": "Un Cue est une activité enregistrée, comme « Étudier l’algèbre linéaire » ou « Travailler sur Atlas » : tout ce qu’il lui faut, dans l’ordre.",
+    "s1.n": "01 · DÉCRIVEZ-LE",
+    "s1.t": "Dites ce que vous voulez faire.",
+    "s1.p": "Votre propre IA propose le Cue avec les apps que vous avez vraiment. Ou créez-le à la main : l’IA n’est jamais obligatoire.",
+    "s2.n": "02 · LANCEZ-LE",
+    "s2.t": "Un clic, ou ⌘1.",
+    "s2.p": "Liens, apps, fichiers et dossiers s’ouvrent dans l’ordre. Lancer un Cue n’utilise jamais l’IA : il fonctionne pareil à chaque fois.",
+    "s3.n": "03 · DISPOSEZ-LE",
+    "s3.t": "Les fenêtres vont où vous voulez.",
+    "s3.p": "Plein écran sur son propre bureau, côte à côte, en quarts ou en tiers, avec un aperçu façon Mission Control.",
+    "claude.eyebrow": "Claude et ChatGPT",
+    "claude.title": 'ou demandez <span class="hl">à claude.</span>',
+    "claude.p": "Cue Space inclut un <b>serveur MCP</b>. Connectez Claude Desktop en un clic, ou Claude Code et ChatGPT, et créez des Cues en discutant. Il trouve vos vraies apps et vos dossiers, et ne lance un Cue que si vous le demandez.",
+    "claude.term": '<div><span class="p">&gt;</span> crée-moi un cue pour mon matin :<br>&nbsp;&nbsp;mail, calendrier et notion.</div><div class="dim">● cue space · create_cue <span class="ok">✓</span></div><div>créé ☀️ point du matin.</div>',
+    "details.eyebrow": "Les détails",
+    "details.title": 'petites choses, <span class="hl">grand gain de temps.</span>',
+    "details.p": "Tout reste sur votre Mac : pas de compte, pas de cloud. Vos Cues sont de simples fichiers qui vous appartiennent.",
+    "c1": '<p class="k">Fichier récent</p><h3>Ouvrez votre dernier téléchargement.</h3><p>Pointez un dossier et Cue Space ouvre le fichier le plus récent, seulement les PDF si vous voulez.</p>',
+    "c2": '<p class="k">Commandes</p><h3>Tapez au lieu de cliquer.</h3><p><code>/add figma, ~/Notes</code>, <code>/off localhost</code>, <code>/start atlas</code>. La plupart fonctionnent sans IA.</p>',
+    "c3": '<p class="k">Raccourcis</p><h3>⌘1–⌘9 et un widget.</h3><p>Lancez vos Cues préférés au clavier, depuis la barre des menus ou votre bureau.</p>',
+    "c4": '<p class="k">Accueil</p><h3>Organisez-le comme des widgets.</h3><p>Épinglez, réordonnez et redimensionnez les sections ; retrouvez ce que vous avez utilisé récemment. Clair ou sombre.</p>',
+    "c5": '<p class="k">Langues</p><h3>English et français.</h3><p>Toute l’app, ses menus et les propositions de l’IA suivent votre langue.</p>',
+    "c6": '<p class="k">Votre IA</p><h3>La vôtre, ou aucune.</h3><p>L’offre gratuite de Gemini, Anthropic, compatible OpenAI ou un modèle local. Les clés restent dans votre trousseau.</p>',
+    "cta.title": 'lancez votre <span class="hl">premier cue.</span>',
+    "cta.github": "Mettre une étoile sur GitHub",
+    "foot.license": "cue space · licence MIT",
+    "foot.built": 'créé avec <a href="https://claude.com/claude-code">claude code</a> · démo faite avec <a href="https://github.com/latent-spaces/brag">/brag</a>',
+    "alt.proposal": "Un Cue proposé par l’IA, prêt à vérifier",
+    "alt.cue": "La page d’un Cue avec son bouton Lancer",
+    "alt.layout": "Choisir où vont les fenêtres sur un bureau",
+    "alt.connect": "La fenêtre Connecter des apps d’IA",
+    "alt.customize": "Personnaliser l’accueil et la taille des sections",
+    "alt.tutorial": "Le tutoriel intégré",
+    "alt.video": "Une démo de Cue Space en 20 secondes",
+  };
+  const TITLE = { en: document.title, fr: "Cue Space · un clic ouvre tout ce qu’une activité demande" };
+  const SOUND = { en: ["Sound on", "Sound off"], fr: ["Activer le son", "Couper le son"] };
+
+  const texts = [...document.querySelectorAll("[data-i18n]")].map((el) => [el, el.innerHTML]);
+  const alts = [...document.querySelectorAll("[data-i18n-alt]")].map((el) => [el, el.hasAttribute("alt") ? "alt" : "aria-label"]).map(([el, attr]) => [el, attr, el.getAttribute(attr)]);
+  const video = document.getElementById("demo"), sound = document.getElementById("sound"), langBtn = document.getElementById("lang");
+  let lang = "en";
+
+  const updateSound = () => (sound.textContent = SOUND[lang][video.muted ? 0 : 1]);
+  function apply(next) {
+    lang = next;
+    document.documentElement.lang = lang;
+    for (const [el, en] of texts) el.innerHTML = lang === "fr" ? FR[el.dataset.i18n] ?? en : en;
+    for (const [el, attr, en] of alts) el.setAttribute(attr, lang === "fr" ? FR[el.dataset.i18nAlt] ?? en : en);
+    document.title = TITLE[lang];
+    langBtn.textContent = lang === "fr" ? "EN" : "FR";
+    langBtn.setAttribute("aria-label", lang === "fr" ? "Read in English" : "Lire en français");
+    updateSound();
+  }
+  langBtn.addEventListener("click", () => {
+    apply(lang === "fr" ? "en" : "fr");
+    try { localStorage.setItem("cuespace-lang", lang); } catch {}
+  });
+
+  // ?lang=fr in the link, then the visitor's last choice, then their browser.
+  let saved = null;
+  try { saved = localStorage.getItem("cuespace-lang"); } catch {}
+  const asked = new URLSearchParams(location.search).get("lang");
+  const start = asked === "fr" || asked === "en" ? asked : saved || ((navigator.language || "").toLowerCase().startsWith("fr") ? "fr" : "en");
+  if (start === "fr") apply("fr");
+
   // The demo plays muted (browsers require it for autoplay); this turns sound on.
-  const video = document.getElementById("demo"), sound = document.getElementById("sound");
   sound.addEventListener("click", () => {
     video.muted = !video.muted;
     if (!video.muted) { video.currentTime = 0; video.play(); }
-    sound.textContent = video.muted ? "Sound on" : "Sound off";
+    updateSound();
     sound.setAttribute("aria-pressed", String(!video.muted));
   });
 </script>
