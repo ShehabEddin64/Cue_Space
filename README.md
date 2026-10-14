@@ -1,186 +1,136 @@
-# Cue Space
+<p align="center">
+  <img src="build/appicon.png" width="112" alt="Cue Space icon">
+</p>
 
-**Reduce the distance between intention and action.**
+<h1 align="center">Cue Space</h1>
 
-Cue Space is an open-source, local-first Mac app. Computers are organized around apps, files and websites; people think in activities: *“I want to work on my project.” “I want to study math.”* Cue Space turns those intentions into **Cues**.
+<p align="center">
+  <b>Your Mac thinks in apps. You think in activities.</b><br>
+  One click opens everything an activity needs: links, apps, files and folders, arranged across your desktops.
+</p>
 
-A Cue is a saved context with everything an activity needs. Start it and everything opens, in order.
+<p align="center">
+  <a href="https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg"><b>Download for Mac</b></a>
+  ·
+  <a href="https://shehabeddin64.github.io/Cue_Space/">Website</a>
+  ·
+  <a href="docs/guide.md">Guide</a>
+</p>
+
+<p align="center">
+  <sub>macOS 12 or later · Apple silicon and Intel · Signed and notarized · Free and open source</sub>
+</p>
+
+<p align="center">
+  <a href="docs/media/demo.mp4"><img src="docs/media/demo-poster.jpg" width="720" alt="Watch the 20-second demo"></a><br>
+  <sub>▶ <a href="docs/media/demo.mp4">Watch the 20-second demo</a></sub>
+</p>
+
+## What is a Cue?
+
+A Cue is a saved activity, like *“Study linear algebra”* or *“Work on Atlas”*: the links, apps, files and folders it needs. Start it and everything opens, in order, arranged the way you like.
 
 ```
-Atlas                         Math
-  GitHub                        Textbook
-  IDE                           Exercise list
-  Claude                        Notes
-  Documentation                 Calculator
-  localhost                     Course website
-  Start Cue →                   Start Cue →
+🛰️ Atlas                        📐 Linear Algebra
+   GitHub                           Course site
+   Code in VS Code                  Newest PDF in Downloads
+   Claude                           Notes
+   localhost:3000                   Calculator
+   Start Cue →                      Start Cue →
 ```
 
-Build Cues by hand (links, apps, files, folders, a project folder opened in your IDE), or describe one to your own AI:
+![Cue Space home](docs/media/home.png)
 
-> “Create a Cue for working on Atlas. I need my GitHub repo, IDE, Claude, localhost and documentation.”
+## Features
 
-Cue Space proposes the Cue using the apps you actually have installed. You review it, fill in anything it couldn’t know (such as where the repo lives), and save.
+### Describe it, or build it
 
-## Download
+Tell Cue Space what you want to do and your own AI proposes the Cue, using apps you actually have. Review it, fix anything, save. Prefer doing it yourself? **Create Manually** builds one by hand: AI is never required.
 
-**[Download Cue Space for Mac](https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg)** (macOS 12 or later, Apple silicon and Intel). Open the disk image and drag Cue Space to Applications. Releases are signed and notarized by Apple.
+![An AI proposal](docs/media/proposal.png)
 
-## Principles
+### One click, arranged across your desktops
 
-- **Activities, not apps.** Organize around what you want to do.
-- **Simplicity above automation.** Making a Cue should feel like making a playlist, not programming a workflow.
-- **AI creates. Cue Space executes.** AI helps write Cues. Starting a Cue never calls an AI: it is deterministic and works offline.
-- **Bring your own AI.** Google Gemini (which has a free tier), Anthropic, or any OpenAI-compatible server, including local models in Ollama or LM Studio. Optional.
-- **Local first.** No account and no cloud. Your Cues are plain files you own.
-- **Predictability over magic.** You stay in control of what your Cues do.
+Start a Cue from its page, the sidebar, **⌘1–⌘9**, the menu bar or the desktop widget. Windows can go full screen on their own desktop, side by side on a new desktop, in quarters or thirds, with a Mission Control-style preview.
 
-*Your computer. Your Cues. Your AI.*
+<p>
+  <img src="docs/media/cue.png" width="49%" alt="A Cue and its desktop layout">
+  <img src="docs/media/layout.png" width="49%" alt="Choosing where windows go">
+</p>
 
-## Commands and shortcuts
+### The details that save time
 
-Type `/` in any composer. Most commands run on your Mac and use no AI tokens at all:
+- **Newest file in a folder:** open your latest download or scan, optionally only PDFs.
+- **Slash commands:** `/add figma, ~/Notes`, `/off localhost`, `/start atlas`. Most run on your Mac with no AI at all.
+- **Tab to complete:** the composer suggests ideas; press Tab to use one.
 
-| Command | Where | AI |
-| --- | --- | --- |
-| `/create <what it’s for>` | Home | Yes |
-| `/new <name>` · `/start <cue>` · `/open <cue>` | Home | No |
-| `/add figma, ~/Notes, github.com/me/repo` | A Cue, or while refining a proposal | Only for items it can’t find on your Mac, with a small request |
-| `/remove` · `/off` · `/on <item>` | A Cue, or while refining | No |
-| `/rename` · `/icon` · `/describe` · `/pin` · `/start` | A Cue | No |
+![The editor with the newest-file option](docs/media/editor.png)
 
-AI requests are kept small: the model sees app names only (bundle ids are filled in locally), and an existing Cue is sent as a few compact lines rather than JSON.
+### Build Cues with Claude or ChatGPT
 
-Keyboard: your first nine Cues get **⌘1–⌘9** (pinned first). The Cues menu lists them. Press ⌘/ to see every shortcut.
+Cue Space includes an MCP server and a command-line tool. Connect Claude Desktop in one click, then just ask: *“Make me a Cue for my morning: Mail, Calendar and Notion.”*
 
-**Desktop layouts.** A Cue can place its windows on desktops (macOS Spaces): an app in full screen on its own desktop, two apps side by side on a new desktop, quarters, thirds and more, with numbered slots and a Mission Control-style preview. Needs Accessibility permission. Creating new desktops automates Mission Control; if that fails, the layout is arranged on the current desktop and the run report says so.
+![Connect AI apps](docs/media/connect.png)
 
-**Widget and links.** A "Cues" widget for the desktop and Notification Center starts a Cue in one click, and `cuespace://start/<id>` links work from Shortcuts, Raycast or Alfred. See [docs/widgets.md](docs/widgets.md).
+### Make it yours
 
-## Build Cues from Claude or ChatGPT (MCP) and the terminal
+Pin favorites, see what you used recently, resize Home’s sections like widgets, switch between light and dark, and use the app in **English or French**. A built-in **Tutorial** explains every feature and how to set it up.
 
-Cue Space ships with `cuespace-cli`, a command-line tool that is also an [MCP](https://modelcontextprotocol.io) server. Connect it to an AI app and build richer Cues by chatting: "Make a Cue for studying math: Moodle, the newest PDF in my Downloads, and my Math folder in VS Code, with Moodle and the PDF side by side on a new desktop."
+<p>
+  <img src="docs/media/customize.png" width="49%" alt="Customize Home">
+  <img src="docs/media/tutorial.png" width="49%" alt="The Tutorial">
+</p>
+<p>
+  <img src="docs/media/home-light.png" width="49%" alt="Light mode">
+  <img src="docs/media/home-fr.png" width="49%" alt="Cue Space in French">
+</p>
 
-Open **File › Connect AI Apps…** (or Settings › Connect…):
+## Install
 
-- **Claude Desktop:** one click adds Cue Space to Claude's settings (your other servers are kept, and the original file is saved next to it as `.before-cuespace`). Restart Claude to load it.
-- **Claude Code:** `claude mcp add --scope user cuespace -- "/Applications/Cue Space.app/Contents/MacOS/cuespace-cli" mcp` (the sheet shows the exact path).
-- **ChatGPT:** it connects to tools by web address, so run `cuespace-cli mcp --http` and expose port 8765 through a tunnel. Every request needs the secret in the address. Keep it private and stop the server when you're done.
+1. [Download **CueSpace.dmg**](https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg).
+2. Open it and drag **Cue Space** to **Applications**.
+3. Optional: to describe Cues, add an AI in Settings (⌘,). Gemini has a free tier.
+4. Optional: to arrange windows, allow Cue Space in **System Settings › Privacy & Security › Accessibility**.
 
-The AI gets these tools: `list_cues`, `get_cue`, `create_cue`, `update_cue`, `delete_cue` (moves to the Trash), `start_cue`, `list_apps`, `search_files` and `check_paths`. Changes go through the same validation as the app. Apps must be installed and are matched by name. Starting a Cue is handed to the app, so it runs exactly like clicking Start: layouts, permissions and the run report included.
+## Private by design
 
-From the terminal:
+- **Local first:** no account and no cloud. Your Cues are plain JSON files on your Mac.
+- **Bring your own AI:** Gemini, Anthropic, any OpenAI-compatible server, or a local model. Keys stay in the macOS Keychain.
+- **AI creates, Cue Space executes:** starting a Cue never uses AI. It opens exactly what’s saved, every time, offline.
 
-```bash
-cuespace-cli list
-cuespace-cli show math
-cuespace-cli start math
-cuespace-cli create cue.json            # or pipe JSON in
-cuespace-cli apps code
-cuespace-cli search "linear algebra"
-```
+## Tech stack
 
-Run `cuespace-cli help` for the JSON format.
+| | |
+| --- | --- |
+| App | [Go](https://go.dev) with [Wails v3](https://v3.wails.io) (native macOS app with a web view) |
+| Interface | [React](https://react.dev), [TypeScript](https://www.typescriptlang.org), [Vite](https://vite.dev), [Tailwind CSS](https://tailwindcss.com) |
+| macOS | Accessibility and Mission Control APIs for layouts, a [WidgetKit](https://developer.apple.com/widgets/) widget in Swift |
+| AI | [Anthropic Go SDK](https://github.com/anthropics/anthropic-sdk-go), Gemini API, OpenAI-compatible APIs |
+| Integrations | [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk) for Claude and ChatGPT, `cuespace-cli` |
+| Release | Developer ID signing, notarization and a GitHub Actions release workflow |
 
-## Your Cues are files
+## Built with
 
-Each Cue is one JSON file in `~/Library/Application Support/CueSpace/cues/`. Read it, edit it in any editor (the app updates live), back it up, sync it, or put it in git. The format is defined by [`schema/cue.v1.json`](schema/cue.v1.json).
+**Libraries:**
+- [dnd-kit](https://dndkit.com) for drag and drop
+- [Lucide](https://lucide.dev) icons
+- [Geist](https://vercel.com/font) by Vercel, via [Fontsource](https://fontsource.org)
+- [jsonschema](https://github.com/santhosh-tekuri/jsonschema), [fsnotify](https://github.com/fsnotify/fsnotify), [go-keyring](https://github.com/zalando/go-keyring) and [plist](https://github.com/DHowett/go-plist)
 
-```json
-{
-  "schemaVersion": 1,
-  "id": "4f1c2a9be0d3c871",
-  "name": "Atlas",
-  "icon": "🛰️",
-  "resources": [
-    { "id": "a1", "type": "url", "label": "GitHub", "url": "https://github.com/me/atlas" },
-    { "id": "a2", "type": "folder", "label": "Code", "path": "~/Developer/atlas",
-      "openWith": { "bundleId": "com.microsoft.VSCode", "name": "Visual Studio Code" } },
-    { "id": "a3", "type": "app", "app": { "bundleId": "com.anthropic.claudefordesktop", "name": "Claude" } },
-    { "id": "a4", "type": "url", "url": "http://localhost:3000", "disabled": true }
-  ]
-}
-```
-
-Resource types are `url` (any scheme, including deep links such as `obsidian://`), `app`, `file` and `folder`. Files and folders can name an `openWith` app. A folder with `"newest": true` opens the most recently added or changed file inside it instead (your latest download, the newest scan), optionally only certain types: `"extensions": ["pdf"]`. Shell commands are deliberately not supported yet.
-
-API keys are stored in the macOS Keychain, never in these files.
-
-## Design
-
-Cue Space follows Apple’s Human Interface Guidelines for structure and its own identity for character. A design reviewer skill grounded in the guidelines lives in `.claude/skills/apple-design`.
-
-- **Identity.** Cue Red `#D93025` for the mark and primary actions only, Ink `#18181A`, Canvas `#F6F5F3`, Night `#111113` in dark mode. Geist for the interface, Geist Mono for paths and URLs. Fonts are bundled, so nothing loads from the network. Tokens are in [`frontend/src/index.css`](frontend/src/index.css), with contrast ratios noted.
-- **The mark.** A ring (the intention) and a dot (the cue that closes it). While the AI works, the dot travels the ring.
-- **AI first, never required.** Home leads with the composer. Proposals are reviewed in place and can be fixed, refined, retried, undone or discarded. The app always says which model is used and where requests go. Building a Cue by hand is always one click away.
-- **Mac conventions.** A sidebar you can hide (⌃⌘S), every command in the menu bar, Settings at ⌘,, and an Appearance setting (System, Light or Dark).
-- **Customizable Home.** Change the greeting, show, hide and reorder the sections (Pinned, Recently Used) and pick a Small, Medium or Large size for each from View › Customize Home.
-- **First run.** A five-step welcome tour, replayable from Help › Welcome Tour.
-- **Tutorial.** A sidebar tab (and Help › Tutorial, ⇧⌘T) with a step-by-step guide to every feature and how to set it up, each with buttons that take you to the right place.
-- **English and French.** Settings › Language: System, English or Français. The whole interface, the menu bar, the widget and the app's messages follow it, and the AI writes its proposals in French when the app is in French. Translations use the English text as the key: `frontend/src/i18n.fr.ts` and `internal/i18n/fr.go`. `npm run check:i18n` and `go test ./internal/i18n` fail if a string is missing.
-- **App icon.** A full-bleed Cue Red square with the mark and a soft shadow, so macOS 26 masks it into the standard shape instead of placing it on a plate. `build/appicon.icon` is the Icon Composer source; compiling it into `Assets.car` needs full Xcode, so builds use `build/darwin/icons.icns`, generated from `build/appicon.png`.
+**Built with [Claude Code](https://claude.com/claude-code), and these skills:**
+- [apple-design](https://github.com/dickwu/apple-design-skill): Apple Human Interface Guidelines reviews for the design
+- [/brag](https://github.com/latent-spaces/brag): the demo video above, rendered with [puppeteer](https://pptr.dev) and [FFmpeg](https://ffmpeg.org)
+- claude-api (bundled with Claude Code): the Anthropic SDK integration
 
 ## Development
 
-Requirements: macOS, Go 1.25+, Node 20+, and the Wails v3 CLI:
-
 ```bash
 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+wails3 dev              # run with hot reload
+./scripts/build.sh      # build and open bin/cuespace.app
 ```
 
-Run with hot reload:
-
-```bash
-wails3 dev
-```
-
-Build `bin/cuespace.app` and open it (quits the running copy and refreshes the widget first; add `--no-run` to only build):
-
-```bash
-./scripts/build.sh
-```
-
-Make a signed, notarized `CueSpace.dmg` for GitHub Releases: see [docs/releasing.md](docs/releasing.md).
-
-Run the Go tests:
-
-```bash
-go test ./internal/...
-```
-
-Development builds are ad-hoc signed with a designated requirement on the bundle id (`build/darwin/designated.req`), so macOS privacy permissions such as Accessibility survive rebuilds. If you granted Accessibility to a build from before this change, remove Cue Space from System Settings › Privacy & Security › Accessibility and add it again once.
-
-To keep your real Cues out of the way while developing, point the app at another folder with `CUESPACE_DIR=/tmp/cues`.
-
-### Layout
-
-```
-main.go              app bootstrap: data folder, services, window
-internal/cue         the Cue model, validation (JSON Schema + rules)
-internal/store       one .cue.json per Cue, atomic writes, folder watcher
-internal/runner      starts a Cue: opens enabled resources in order, reports each step
-internal/platform    the only OS-specific code: `open`, installed-app scan, Trash (macOS)
-internal/ai          providers (Anthropic, Gemini native API, OpenAI-compatible), retries and backup models, the Cue proposal prompt
-internal/settings    settings.json (provider, model, base URL)
-internal/secrets     Keychain access
-services/            the thin layer bound to the frontend (TypeScript bindings are generated)
-frontend/            React + TypeScript + Tailwind UI
-schema/cue.v1.json   the public file format
-```
-
-Two rules keep the product predictable:
-
-1. **The runner never talks to the AI**, and the AI never touches the runner or the store. An AI proposal is just an unsaved Cue that the user reviews.
-2. **Only `internal/platform` knows about the OS.** Windows and Linux support means adding files there.
-
-## Roadmap
-
-Shortcut → Workspace → Context → Continue.
-
-- **Now:** Start a Cue to open everything you need.
-- **Next:** global-hotkey quick launcher; Windows and Linux.
-- **Then:** window layouts and a dedicated browser window per Cue.
-- **Eventually:** *Continue Atlas* puts you back where you left off: restored tabs, files and editor state.
+More in [docs/development.md](docs/development.md), releases in [docs/releasing.md](docs/releasing.md), and contributing in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

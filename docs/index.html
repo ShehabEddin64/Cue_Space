@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cue Space · one click opens everything an activity needs</title>
+<meta name="description" content="Cue Space is a free, open-source Mac app. Save an activity as a Cue and one click opens its links, apps, files and folders, arranged across your desktops.">
+<meta property="og:title" content="Cue Space">
+<meta property="og:description" content="Your Mac thinks in apps. You think in activities. One click opens everything an activity needs.">
+<meta property="og:image" content="https://shehabeddin64.github.io/Cue_Space/media/demo-poster.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.png">
+<style>
+  @font-face { font-family: "Geist"; src: url("assets/fonts/geist-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+  @font-face { font-family: "Geist"; src: url("assets/fonts/geist-latin-wght-italic.woff2") format("woff2"); font-weight: 100 900; font-style: italic; font-display: swap; }
+  @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist-mono-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+
+  :root {
+    --red: #d93025; --red-deep: #b9261c; --red-night: #ff5a4e;
+    --ink: #18181a; --canvas: #f6f5f3; --night: #111113; --surface: #1e1e21;
+    --graphite: #5d5d63; --hair: rgba(24, 24, 26, .12);
+    --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--sans); background: var(--canvas); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; }
+  a { color: inherit; }
+  img, video { display: block; max-width: 100%; }
+  .wrap { width: min(1180px, 100% - 48px); margin: 0 auto; }
+
+  /* Type */
+  h1, h2 { font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; text-transform: lowercase; }
+  h1 { font-size: clamp(50px, 6.4vw, 100px); }
+  h2 { font-size: clamp(42px, 6vw, 88px); }
+  .hl { display: inline-block; background: var(--ink); color: var(--canvas); font-style: italic; font-weight: 800; padding: 0.02em 0.16em 0.08em 0.1em; margin-top: 0.06em; transform: rotate(-1.2deg); }
+  .on-night .hl { background: var(--red); color: #fff; }
+  .eyebrow { font-family: var(--mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; }
+  .lede { font-size: clamp(19px, 1.8vw, 23px); line-height: 1.45; max-width: 34ch; }
+  .mono { font-family: var(--mono); }
+
+  /* Buttons */
+  .btns { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; height: 54px; padding: 0 26px; border-radius: 999px; font-size: 17px; font-weight: 650; text-decoration: none; transition: transform .15s ease, background-color .15s ease; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-ink { background: var(--ink); color: #fff; }
+  .btn-ink:hover { background: #000; }
+  .btn-line { border: 1.5px solid currentColor; }
+  .btn svg { width: 18px; height: 18px; }
+
+  /* Nav */
+  nav { display: flex; align-items: center; gap: 28px; padding: 22px 0; font-size: 15px; font-weight: 550; }
+  nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 750; letter-spacing: -0.02em; font-size: 19px; text-decoration: none; }
+  nav .links { display: flex; gap: 24px; margin-left: auto; }
+  nav .links a { text-decoration: none; opacity: .85; }
+  nav .links a:hover { opacity: 1; }
+  nav .btn { height: 40px; padding: 0 18px; font-size: 15px; }
+
+  /* Hero */
+  .hero { background: var(--red); color: #fff; padding-bottom: 96px; overflow: hidden; }
+  .hero h1 { color: var(--ink); margin: 22px 0 24px; }
+  .hero .grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: center; margin-top: 28px; }
+  .hero .lede { color: #fff; }
+  .hero .btns { margin-top: 34px; }
+  .hero .meta { margin-top: 22px; font-family: var(--mono); font-size: 13px; letter-spacing: 0.06em; opacity: .9; }
+  .video-card { background: var(--night); border-radius: 22px; padding: 12px; box-shadow: 0 40px 90px rgba(80, 8, 4, .45), 0 0 0 1px rgba(255,255,255,.08); transform: rotate(1.4deg); }
+  .video-card .bar { display: flex; align-items: center; gap: 7px; padding: 4px 6px 12px; color: #a1a1a8; font-family: var(--mono); font-size: 12px; }
+  .video-card .bar b { width: 11px; height: 11px; border-radius: 50%; display: block; }
+  .video-card .bar span { margin-left: 10px; }
+  .video-card video { border-radius: 12px; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+  .sound { margin-left: auto; font: inherit; color: #f4f3f1; background: rgba(255,255,255,.08); border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  .sound:hover { background: rgba(255,255,255,.16); }
+
+  /* Sections */
+  section { padding: 110px 0; }
+  .on-night { background: var(--night); color: #f4f3f1; }
+  .head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 56px; }
+  .head .eyebrow { color: var(--red); margin-bottom: 18px; }
+  .on-night .head .eyebrow { color: var(--red-night); }
+  .head p { max-width: 36ch; color: var(--graphite); font-size: 18px; }
+  .on-night .head p { color: #a1a1a8; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  /* Screenshots carry their own window frame and shadow. */
+  .step img { width: 100%; aspect-ratio: 1720 / 1151; object-fit: cover; object-position: top; margin: -3% 0 0; }
+  .step .n { font-family: var(--mono); font-size: 13px; color: var(--red); letter-spacing: .1em; margin: 6px 0 8px; }
+  .step h3 { font-size: 26px; letter-spacing: -0.03em; line-height: 1.1; }
+  .step p { color: var(--graphite); margin-top: 8px; font-size: 17px; }
+
+  .claude { display: grid; grid-template-columns: 1fr 1.15fr; gap: 56px; align-items: center; }
+  .term { background: #000; border-radius: 16px; padding: 26px 28px; font-family: var(--mono); font-size: clamp(15px, 1.5vw, 18px); line-height: 1.7; box-shadow: 0 0 0 1px rgba(255,255,255,.1); }
+  .term .p { color: var(--red-night); }
+  .term .dim { color: #8b8b93; }
+  .term .ok { color: #7bd88f; }
+  .claude .copy p { color: #a1a1a8; font-size: 18px; margin-top: 22px; max-width: 42ch; }
+  .claude .copy p b { color: #f4f3f1; font-weight: 600; }
+  .claude img { width: 100%; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card { background: #fff; border-radius: 20px; padding: 26px; box-shadow: 0 0 0 1px var(--hair); }
+  .card .k { font-family: var(--mono); font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--red); }
+  .card h3 { font-size: 22px; letter-spacing: -0.025em; margin-top: 12px; line-height: 1.15; }
+  .card p { color: var(--graphite); margin-top: 8px; font-size: 16px; }
+  .card code { font-family: var(--mono); font-size: .9em; background: rgba(24,24,26,.06); padding: 1px 6px; border-radius: 6px; }
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 56px; }
+  .shots img { width: 100%; }
+
+  .cta { background: var(--red); color: #fff; text-align: left; }
+  .cta h2 { color: var(--ink); margin-bottom: 34px; }
+  footer { background: var(--ink); color: #a1a1a8; font-family: var(--mono); font-size: 13px; padding: 28px 0; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 26px; }
+  footer a { color: #f4f3f1; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 900px) {
+    .hero .grid, .claude { grid-template-columns: 1fr; gap: 44px; }
+    .steps, .cards { grid-template-columns: 1fr; }
+    .shots { grid-template-columns: 1fr; }
+    nav .links { display: none; }
+    nav .btn { margin-left: auto; }
+    section { padding: 80px 0; }
+    .video-card { transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .btn, .hl, .video-card { transition: none; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="#">
+        <svg width="26" height="26" viewBox="0 0 100 100" aria-hidden="true"><path d="M72.48 30.72 A30 30 0 1 0 72.48 69.28" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round"/><circle cx="78.3" cy="50" r="8" fill="#18181a"/></svg>
+        cue space
+      </a>
+      <div class="links">
+        <a href="#how">How it works</a>
+        <a href="#claude">Claude</a>
+        <a href="#details">Features</a>
+        <a href="https://github.com/ShehabEddin64/Cue_Space">GitHub</a>
+      </div>
+      <a class="btn btn-ink" href="https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg">Download</a>
+    </nav>
+
+    <div class="grid">
+      <div>
+        <p class="eyebrow">Free · Open source · For Mac</p>
+        <h1>your mac thinks in apps. you think in <span class="hl">activities.</span></h1>
+        <p class="lede">Save an activity as a Cue. One click opens its links, apps, files and folders, arranged across your desktops.</p>
+        <div class="btns">
+          <a class="btn btn-ink" href="https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>
+            Download for Mac
+          </a>
+          <a class="btn btn-line" href="https://github.com/ShehabEddin64/Cue_Space">View on GitHub</a>
+        </div>
+        <p class="meta">macOS 12+ · Apple silicon &amp; Intel · Signed &amp; notarized</p>
+      </div>
+      <div class="video-card">
+        <div class="bar"><b style="background:#ff5f57"></b><b style="background:#febc2e"></b><b style="background:#28c840"></b><span>cue space · 20 s</span><button class="sound" id="sound" type="button" aria-pressed="false">Sound on</button></div>
+        <video id="demo" src="media/demo.mp4" poster="media/demo-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="A 20-second demo of Cue Space"></video>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="how">
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <p class="eyebrow">How it works</p>
+          <h2>one click. <span class="hl">everything opens.</span></h2>
+        </div>
+        <p>A Cue is a saved activity, like “Study linear algebra” or “Work on Atlas”: everything it needs, in order.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <img src="media/proposal.png" alt="An AI-proposed Cue ready to review" loading="lazy">
+          <p class="n">01 · DESCRIBE IT</p>
+          <h3>Say what you want to do.</h3>
+          <p>Your own AI proposes the Cue with apps you actually have. Or build it by hand: AI is never required.</p>
+        </div>
+        <div class="step">
+          <img src="media/cue.png" alt="A Cue’s page with its Start button" loading="lazy">
+          <p class="n">02 · START IT</p>
+          <h3>One click, or ⌘1.</h3>
+          <p>Links, apps, files and folders open in order. Starting a Cue never uses AI, so it works the same every time.</p>
+        </div>
+        <div class="step">
+          <img src="media/layout.png" alt="Choosing where windows go on a desktop" loading="lazy">
+          <p class="n">03 · ARRANGE IT</p>
+          <h3>Windows land where you want.</h3>
+          <p>Full screen on its own desktop, side by side, quarters or thirds, with a Mission Control-style preview.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="claude" class="on-night">
+    <div class="wrap claude">
+      <div class="copy">
+        <p class="eyebrow" style="color:var(--red-night);margin-bottom:18px">Claude &amp; ChatGPT</p>
+        <h2>or just <span class="hl">ask claude.</span></h2>
+        <p>Cue Space includes an <b>MCP server</b>. Connect Claude Desktop in one click, or Claude Code and ChatGPT, and build Cues by chatting. It finds your real apps and folders, and only starts a Cue when you ask.</p>
+        <div class="term" style="margin-top:28px">
+          <div><span class="p">&gt;</span> make me a cue for my morning:<br>&nbsp;&nbsp;mail, calendar and notion.</div>
+          <div class="dim">● cue space · create_cue <span class="ok">✓</span></div>
+          <div>created ☀️ morning check-in.</div>
+        </div>
+      </div>
+      <img src="media/connect.png" alt="The Connect AI Apps sheet" loading="lazy">
+    </div>
+  </section>
+
+  <section id="details">
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <p class="eyebrow">The details</p>
+          <h2>small things, <span class="hl">big time saved.</span></h2>
+        </div>
+        <p>Everything stays on your Mac: no account, no cloud. Your Cues are plain files you own.</p>
+      </div>
+      <div class="cards">
+        <div class="card"><p class="k">Newest file</p><h3>Open your latest download.</h3><p>Point at a folder and Cue Space opens the most recent file in it, optionally only PDFs.</p></div>
+        <div class="card"><p class="k">Commands</p><h3>Type, don’t click.</h3><p><code>/add figma, ~/Notes</code>, <code>/off localhost</code>, <code>/start atlas</code>. Most run without any AI.</p></div>
+        <div class="card"><p class="k">Shortcuts</p><h3>⌘1–⌘9 and a widget.</h3><p>Start your favorite Cues from the keyboard, the menu bar or your desktop.</p></div>
+        <div class="card"><p class="k">Home</p><h3>Arrange it like widgets.</h3><p>Pin, reorder and resize sections; see what you used recently. Light or dark.</p></div>
+        <div class="card"><p class="k">Languages</p><h3>English et français.</h3><p>The whole app, its menus and its AI proposals follow your language.</p></div>
+        <div class="card"><p class="k">Your AI</p><h3>Bring your own, or none.</h3><p>Gemini’s free tier, Anthropic, OpenAI-compatible or a local model. Keys stay in your Keychain.</p></div>
+      </div>
+      <div class="shots">
+        <img src="media/customize.png" alt="Customizing Home with section sizes" loading="lazy">
+        <img src="media/tutorial.png" alt="The built-in Tutorial" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <h2>start your <span class="hl">first cue.</span></h2>
+      <div class="btns">
+        <a class="btn btn-ink" href="https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>
+          Download for Mac
+        </a>
+        <a class="btn btn-line" href="https://github.com/ShehabEddin64/Cue_Space">Star on GitHub</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>cue space · MIT license</span>
+    <a href="https://github.com/ShehabEddin64/Cue_Space">github</a>
+    <a href="https://github.com/ShehabEddin64/Cue_Space/blob/main/docs/guide.md">guide</a>
+    <span>built with <a href="https://claude.com/claude-code">claude code</a> · demo made with <a href="https://github.com/latent-spaces/brag">/brag</a></span>
+  </div>
+</footer>
+
+<script>
+  // The demo plays muted (browsers require it for autoplay); this turns sound on.
+  const video = document.getElementById("demo"), sound = document.getElementById("sound");
+  sound.addEventListener("click", () => {
+    video.muted = !video.muted;
+    if (!video.muted) { video.currentTime = 0; video.play(); }
+    sound.textContent = video.muted ? "Sound on" : "Sound off";
+    sound.setAttribute("aria-pressed", String(!video.muted));
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+Your Mac thinks in apps. You think in activities. Cue Space opens everything you need for one, arranged on its own desktop, in one click. Describe it to your own AI, build it by hand, or just ask Claude. Free and open source for Mac: github.com/ShehabEddin64/Cue_Space

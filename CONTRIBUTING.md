@@ -5,11 +5,11 @@ Thanks for helping. Cue Space aims to stay small, predictable and easy to read, 
 ## Before you start
 
 - For anything larger than a bug fix, open an issue first so we can agree on the approach.
-- Read the two architecture rules in the README: the runner never calls the AI, and only `internal/platform` talks to the OS.
+- Read the two architecture rules in [docs/development.md](docs/development.md): the runner never calls the AI, and only `internal/platform` talks to the OS.
 
 ## Making a change
 
-1. Set up the tools listed under *Development* in the README.
+1. Set up the tools listed in [docs/development.md](docs/development.md).
 2. Run `go test ./internal/...` and `cd frontend && npm run build` before opening a pull request.
 3. If you change a Go service signature, regenerate the TypeScript bindings with `wails3 generate bindings -ts -d frontend/bindings` and commit the result.
 4. If you change the Cue file format, update `schema/cue.v1.json`, the Go model in `internal/cue`, and the tests together. Existing `.cue.json` files must keep loading.

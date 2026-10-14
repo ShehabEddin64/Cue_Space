@@ -453,7 +453,9 @@ export function Tutorial({ onAction }: { onAction: (a: TutorialAction) => void }
   const topic = topics[index];
   const next = topics[index + 1];
 
-  useEffect(() => detail.current?.scrollTo({ top: 0 }), [active]);
+  useEffect(() => {
+    detail.current?.scrollTo({ top: 0 });
+  }, [active]);
 
   return (
     <div className="flex h-full flex-col">
