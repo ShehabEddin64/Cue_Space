@@ -51,7 +51,7 @@
 
   /* Nav */
   nav { display: flex; align-items: center; gap: 28px; padding: 22px 0; font-size: 15px; font-weight: 550; }
-  nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 750; letter-spacing: -0.02em; font-size: 19px; text-decoration: none; }
+  nav .brand { display: flex; align-items: center; gap: 10px; white-space: nowrap; font-weight: 750; letter-spacing: -0.02em; font-size: 19px; text-decoration: none; }
   nav .links { display: flex; gap: 24px; margin-left: auto; }
   nav .links a { text-decoration: none; opacity: .85; }
   nav .links a:hover { opacity: 1; }
@@ -71,7 +71,8 @@
   .video-card .bar b { width: 11px; height: 11px; border-radius: 50%; display: block; }
   .video-card .bar span { margin-left: 10px; }
   .video-card video { border-radius: 12px; width: 100%; aspect-ratio: 16 / 9; background: #000; }
-  .sound { margin-left: auto; font: inherit; color: #f4f3f1; background: rgba(255,255,255,.08); border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  .video-card .bar span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sound { white-space: nowrap; margin-left: auto; font: inherit; color: #f4f3f1; background: rgba(255,255,255,.08); border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
   .sound:hover { background: rgba(255,255,255,.16); }
 
   /* Sections */
@@ -121,6 +122,8 @@
     .shots { grid-template-columns: 1fr; }
     nav .links { display: none; }
     .lang { margin-left: auto; }
+    nav { gap: 12px; }
+    .video-card .bar span { display: none; }
     section { padding: 80px 0; }
     .video-card { transform: none; }
   }
