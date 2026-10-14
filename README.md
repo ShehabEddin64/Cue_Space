@@ -21,10 +21,8 @@
   <sub>macOS 12 or later · Apple silicon and Intel · Signed and notarized · Free and open source</sub>
 </p>
 
-<p align="center">
-  <a href="docs/media/demo.mp4"><img src="docs/media/demo-poster.jpg" width="720" alt="Watch the 20-second demo"></a><br>
-  <sub>▶ <a href="docs/media/demo.mp4">Watch the 20-second demo</a></sub>
-</p>
+https://github.com/user-attachments/assets/aee529f5-3319-4f4e-8394-fd31b428f28d
+
 
 ## What is a Cue?
 
