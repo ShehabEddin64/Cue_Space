@@ -26,6 +26,7 @@ jobs:
         run: |
           npm ci
           npm run build
+          npm run check:i18n
 
       - name: Check formatting
         run: test -z "$(gofmt -l .)"

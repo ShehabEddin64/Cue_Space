@@ -16,6 +16,8 @@ command -v wails3 >/dev/null || {
 pkill -x cuespace 2>/dev/null && sleep 0.5 || true
 
 wails3 generate bindings -ts -d frontend/bindings >/dev/null
+# A universal binary left by scripts/release.sh can't be overwritten by go build.
+rm -f bin/cuespace
 wails3 task darwin:package
 
 # Let WidgetKit pick up the rebuilt widget.

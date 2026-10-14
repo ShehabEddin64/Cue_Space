@@ -172,7 +172,7 @@ tasks:
       - cp "{{.BIN_DIR}}/{{.APP_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS"
       - cp build/darwin/Info.plist "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents"
       # The command-line tool and MCP server (cuespace-cli), next to the app.
-      - '{{if eq OS "darwin"}}go build -trimpath -ldflags="-s -w" -o "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS/cuespace-cli" ./cmd/cuespace-cli{{else}}echo "Skipping cuespace-cli"{{end}}'
+      - '{{if eq OS "darwin"}}sh scripts/build-cli.sh "{{.BIN_DIR}}/{{.APP_NAME}}.app"{{else}}echo "Skipping cuespace-cli"{{end}}'
       - '{{if eq OS "darwin"}}sh build/darwin/widgets/build.sh "{{.BIN_DIR}}/{{.APP_NAME}}.app"{{else}}echo "Skipping widgets"{{end}}'
       - task: '{{if eq OS "darwin"}}codesign:adhoc{{else}}codesign:skip{{end}}'
 

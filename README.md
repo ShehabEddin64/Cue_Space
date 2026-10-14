@@ -22,6 +22,10 @@ Build Cues by hand (links, apps, files, folders, a project folder opened in your
 
 Cue Space proposes the Cue using the apps you actually have installed. You review it, fill in anything it couldn’t know (such as where the repo lives), and save.
 
+## Download
+
+**[Download Cue Space for Mac](https://github.com/ShehabEddin64/Cue_Space/releases/latest/download/CueSpace.dmg)** (macOS 12 or later, Apple silicon and Intel). Open the disk image and drag Cue Space to Applications. Releases are signed and notarized by Apple.
+
 ## Principles
 
 - **Activities, not apps.** Organize around what you want to do.
@@ -135,6 +139,8 @@ Build `bin/cuespace.app` and open it (quits the running copy and refreshes the w
 ```bash
 ./scripts/build.sh
 ```
+
+Make a signed, notarized `CueSpace.dmg` for GitHub Releases: see [docs/releasing.md](docs/releasing.md).
 
 Run the Go tests:
 
